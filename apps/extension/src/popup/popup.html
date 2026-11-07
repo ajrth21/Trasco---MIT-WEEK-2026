@@ -272,10 +272,13 @@
     </div>
     <div class="toggle-row">
       <span class="toggle-label">Peringatan Suara Avatar</span>
-      <label class="switch">
-        <input type="checkbox" id="toggleAudio" checked>
-        <span class="slider"></span>
-      </label>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button id="btnTestVoice" style="background: none; border: 1px solid #06b6d4; color: #38bdf8; border-radius: 4px; padding: 1px 6px; font-size: 10px; cursor: pointer;">Tes Suara</button>
+        <label class="switch">
+          <input type="checkbox" id="toggleAudio" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
   </div>
 
@@ -289,10 +292,16 @@
     <div id="scanResult" class="result-box"></div>
   </div>
 
-  <button id="btnOpenDashboard" class="btn-dashboard">
-    <span>📊</span>
-    <span>Buka Web Dashboard</span>
-  </button>
+  <div style="display: flex; gap: 8px;">
+    <button id="btnOpenDashboard" class="btn-dashboard">
+      <span>📊</span>
+      <span>Dashboard</span>
+    </button>
+    <button id="btnOpenPlayground" class="btn-dashboard" style="border-color: #06b6d4; color: #38bdf8;">
+      <span>🎮</span>
+      <span>Test Playground</span>
+    </button>
+  </div>
 
   <script src="popup.js"></script>
 </body>

@@ -99,5 +99,29 @@ document.addEventListener('DOMContentLoaded', () => {
   btnOpenDashboard.addEventListener('click', () => {
     chrome.tabs.create({ url: 'http://localhost:5173' });
   });
+
+  // Test Voice Alert
+  const btnTestVoice = document.getElementById('btnTestVoice');
+  if (btnTestVoice) {
+    btnTestVoice.addEventListener('click', () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const testUtterance = new SpeechSynthesisUtterance('Halo! TRASCO Cyber Guardian aktif menjaga aktivitas digital Anda.');
+        testUtterance.lang = 'id-ID';
+        testUtterance.rate = 1.05;
+        window.speechSynthesis.speak(testUtterance);
+      } else {
+        alert('Browser Anda tidak mendukung Web Speech API.');
+      }
+    });
+  }
+
+  // Open Interactive Test Playground
+  const btnOpenPlayground = document.getElementById('btnOpenPlayground');
+  if (btnOpenPlayground) {
+    btnOpenPlayground.addEventListener('click', () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL('demo_testpage.html') });
+    });
+  }
 });
 

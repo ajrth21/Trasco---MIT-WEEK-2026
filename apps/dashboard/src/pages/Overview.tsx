@@ -1,5 +1,6 @@
 import React from 'react';
 import { SecurityOverviewData } from '../types';
+import { StatCard, ThreatRadar } from '../components';
 
 interface OverviewProps {
   data: SecurityOverviewData | null;
@@ -78,77 +79,42 @@ export const Overview: React.FC<OverviewProps> = ({ data, onOpenSimulator }) => 
         </div>
       </div>
 
-      {/* 4 Metric Cards */}
+      {/* 4 Modular Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-all">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
-            <span>Total Pemindaian</span>
-            <span className="p-2 rounded-lg bg-slate-800 text-cyan-400">🔍</span>
-          </div>
-          <div className="text-2xl font-bold text-white mt-3">{riskBreakdown.totalScans}</div>
-          <div className="text-xs text-slate-400 mt-1">Aktivitas URL, Teks, & Gambar</div>
-        </div>
-
-        <div className="bg-slate-900/80 border border-rose-950/60 rounded-xl p-5 hover:border-rose-800/80 transition-all">
-          <div className="flex items-center justify-between text-rose-400 text-xs font-semibold uppercase tracking-wider">
-            <span>Ancaman Kritis Dicegah</span>
-            <span className="p-2 rounded-lg bg-rose-950/60 text-rose-400">🚨</span>
-          </div>
-          <div className="text-2xl font-bold text-rose-400 mt-3">{riskBreakdown.highRiskCount}</div>
-          <div className="text-xs text-slate-400 mt-1">Skema OTP & lowongan fiktif</div>
-        </div>
-
-        <div className="bg-slate-900/80 border border-amber-950/60 rounded-xl p-5 hover:border-amber-800/80 transition-all">
-          <div className="flex items-center justify-between text-amber-400 text-xs font-semibold uppercase tracking-wider">
-            <span>Peringatan Waspada</span>
-            <span className="p-2 rounded-lg bg-amber-950/60 text-amber-400">⚠️</span>
-          </div>
-          <div className="text-2xl font-bold text-amber-400 mt-3">{riskBreakdown.mediumRiskCount}</div>
-          <div className="text-xs text-slate-400 mt-1">Indikasi rekayasa sosial</div>
-        </div>
-
-        <div className="bg-slate-900/80 border border-emerald-950/60 rounded-xl p-5 hover:border-emerald-800/80 transition-all">
-          <div className="flex items-center justify-between text-emerald-400 text-xs font-semibold uppercase tracking-wider">
-            <span>Aktivitas Aman</span>
-            <span className="p-2 rounded-lg bg-emerald-950/60 text-emerald-400">✅</span>
-          </div>
-          <div className="text-2xl font-bold text-emerald-400 mt-3">{riskBreakdown.lowRiskCount}</div>
-          <div className="text-xs text-slate-400 mt-1">Terverifikasi kredibel</div>
-        </div>
+        <StatCard
+          title="Total Pemindaian"
+          value={riskBreakdown.totalScans}
+          subtitle="Aktivitas URL, Teks, & Gambar"
+          icon="🔍"
+          variant="default"
+        />
+        <StatCard
+          title="Ancaman Kritis Dicegah"
+          value={riskBreakdown.highRiskCount}
+          subtitle="Skema OTP & lowongan fiktif"
+          icon="🚨"
+          variant="danger"
+        />
+        <StatCard
+          title="Peringatan Waspada"
+          value={riskBreakdown.mediumRiskCount}
+          subtitle="Indikasi rekayasa sosial"
+          icon="⚠️"
+          variant="warning"
+        />
+        <StatCard
+          title="Aktivitas Aman"
+          value={riskBreakdown.lowRiskCount}
+          subtitle="Terverifikasi kredibel"
+          icon="✅"
+          variant="success"
+        />
       </div>
 
       {/* Two Column Layout: Threat Distribution & Weekly Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Threat Distribution */}
-        <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6">
-          <h3 className="text-base font-bold text-white mb-1 flex items-center gap-2">
-            <span>🎯</span> Distribusi Kategori Ancaman
-          </h3>
-          <p className="text-xs text-slate-400 mb-6">Pola klasifikasi ancaman siber yang teridentifikasi</p>
-
-          <div className="space-y-4">
-            {threatDistribution.map((item, idx) => (
-              <div key={idx} className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-slate-300">{item.category}</span>
-                  <span className="text-slate-400">{item.count} deteksi ({item.percentage}%)</span>
-                </div>
-                <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-700 ${
-                      item.category === 'SAFE'
-                        ? 'bg-emerald-500'
-                        : item.category.includes('JOB') || item.category.includes('OTP')
-                        ? 'bg-rose-500'
-                        : 'bg-amber-500'
-                    }`}
-                    style={{ width: `${item.percentage}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Threat Distribution Component */}
+        <ThreatRadar distribution={threatDistribution} />
 
         {/* Weekly Trend Chart */}
         <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6">

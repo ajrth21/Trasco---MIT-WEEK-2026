@@ -8,6 +8,9 @@ env/
 venv/
 ENV/
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 *.sqlite3
 
 # Node / Frontend
@@ -15,6 +18,7 @@ node_modules/
 dist/
 build/
 .cache/
+*.tsbuildinfo
 
 # Environment & Secrets
 .env

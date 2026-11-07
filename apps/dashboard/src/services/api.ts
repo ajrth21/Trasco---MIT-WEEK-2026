@@ -21,8 +21,8 @@ export async function fetchSecurityOverview(): Promise<SecurityOverviewData> {
       },
       threatDistribution: [
         { category: 'SAFE', count: 14, percentage: 70 },
-        { category: 'FAKE JOB OFFER', count: 3, percentage: 15 },
-        { category: 'OTP THEFT', count: 2, percentage: 10 },
+        { category: 'FAKE_JOB_OFFER', count: 3, percentage: 15 },
+        { category: 'OTP_THEFT', count: 2, percentage: 10 },
         { category: 'TYPOSQUATTING', count: 1, percentage: 5 }
       ],
       weeklyTrends: [
@@ -41,7 +41,7 @@ export async function fetchSecurityOverview(): Promise<SecurityOverviewData> {
           sanitizedSnippet: 'Tawaran kerja like video TikTok komisi 500rb/hari...',
           riskLevel: 'HIGH',
           riskScore: 94,
-          threatCategory: 'FAKE JOB OFFER',
+          threatCategory: 'FAKE_JOB_OFFER',
           createdAt: '2026-11-08 02:40'
         },
         {
