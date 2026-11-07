@@ -1,0 +1,135 @@
+import uuid
+from datetime import datetime, timezone
+from typing import Dict, Any, List
+from app.services.heuristic_engine import analyze_url_heuristics, analyze_text_heuristics
+from app.services.gemini_service import analyze_with_gemini
+from app.services.image_analyzer import analyze_image_with_gemini
+
+
+def determine_risk_level(score: int) -> str:
+    if score >= 70:
+        return "HIGH"
+    elif score >= 35:
+        return "MEDIUM"
+    return "LOW"
+
+
+def orchestrate_detection(scan_type: str, content: str, metadata: Dict[str, Any] = None) -> Dict[str, Any]:
+    """Orchestrates heuristic and AI detection, producing deterministic risk assessment."""
+    start_time = datetime.now()
+    indicators: List[Dict[str, Any]] = []
+    category = "SAFE"
+    final_score = 0
+    summary = "Aktivitas terverifikasi aman. Tidak ditemukan indikator penipuan atau ancaman siber."
+    recommended_actions: List[str] = ["Tetap berhati-hati saat berselancar di internet."]
+    
+    avatar_mood = "IDLE_VIGILANT"
+    speech_text = "Status aman. TRASCO terus menjaga aktivitas digital Anda."
+    accent_color = "#10B981"  # Emerald
+
+    # Step 1: Run Heuristics
+    if scan_type == "URL":
+        h_result = analyze_url_heuristics(content)
+        h_score = h_result["heuristicScore"]
+        indicators.extend(h_result["indicators"])
+        if h_result["threatCategory"] != "SAFE":
+            category = h_result["threatCategory"]
+    elif scan_type == "TEXT":
+        h_result = analyze_text_heuristics(content)
+        h_score = h_result["heuristicScore"]
+        indicators.extend(h_result["indicators"])
+        if h_result["threatCategory"] != "SAFE":
+            category = h_result["threatCategory"]
+    elif scan_type == "IMAGE":
+        h_score = 0  # Heuristics for image will rely on visual inspection
+    else:
+        h_score = 0
+
+    # Step 2: Run Gemini AI (Multimodal / Text)
+    ai_result = None
+    if scan_type in ["URL", "TEXT"]:
+        ai_result = analyze_with_gemini(scan_type, content)
+    elif scan_type == "IMAGE":
+        ai_result = analyze_image_with_gemini(content)
+
+    # Step 3: Hybrid Score Fusion
+    if ai_result:
+        ai_score = ai_result.get("confidenceScore", 0)
+        ai_category = ai_result.get("threatCategory", "SAFE")
+        
+        # If AI found indicators, incorporate them
+        for ind in ai_result.get("aiIndicators", []):
+            # Avoid duplicate indicators
+            if not any(existing["indicator"] == ind.get("indicator") for existing in indicators):
+                indicators.append(ind)
+
+        # Weighted calculation (60% AI contextual + 40% deterministic heuristics if heuristic triggered)
+        if h_score > 0:
+            final_score = int((0.6 * ai_score) + (0.4 * h_score))
+        else:
+            final_score = ai_score
+
+        if ai_category != "SAFE":
+            category = ai_category
+
+        summary = ai_result.get("summary", summary)
+        recommended_actions = ai_result.get("recommendedActions", recommended_actions)
+        avatar_mood = ai_result.get("avatarMood", avatar_mood)
+        speech_text = ai_result.get("speechWarning", speech_text)
+    else:
+        # Fallback to pure heuristics when Gemini is unavailable
+        final_score = h_score
+        if final_score >= 70:
+            summary = f"Terdeteksi ancaman siber berisiko tinggi ({category.replace('_', ' ')}). Pola ancaman sesuai basis data modus penipuan."
+            recommended_actions = [
+                "JANGAN membagikan data pribadi, kode OTP, atau transfer dana.",
+                "Segera tutup halaman atau hentikan komunikasi dengan kontak ini.",
+                "Laporkan kontak atau domain ini ke pihak berwenang."
+            ]
+            avatar_mood = "CRITICAL_SHIELD"
+            speech_text = "Bahaya! Ini adalah pola penipuan siber. Segera hentikan interaksi sekarang!"
+        elif final_score >= 35:
+            summary = "Ditemukan beberapa indikator mencurigakan pada konten atau domain ini."
+            recommended_actions = [
+                "Verifikasi keaslian pengirim melalui saluran resmi terpisah.",
+                "Jangan terburu-buru mengambil keputusan finansial atau mengklik tautan."
+            ]
+            avatar_mood = "CAUTION_ALERT"
+            speech_text = "Hati-hati, ada indikasi mencurigakan. Periksa kembali sebelum melanjutkan."
+
+    # Clamp score to [0, 100]
+    final_score = max(0, min(100, final_score))
+    risk_level = determine_risk_level(final_score)
+
+    # Color mapping according to risk level
+    if risk_level == "HIGH":
+        accent_color = "#EF4444"
+        avatar_mood = "CRITICAL_SHIELD"
+    elif risk_level == "MEDIUM":
+        accent_color = "#F59E0B"
+        avatar_mood = "CAUTION_ALERT"
+    else:
+        accent_color = "#10B981"
+        avatar_mood = "IDLE_VIGILANT"
+
+    latency_ms = round((datetime.now() - start_time).total_seconds() * 1000, 2)
+
+    return {
+        "scanId": str(uuid.uuid4()),
+        "riskLevel": risk_level,
+        "riskScore": final_score,
+        "threatCategory": category,
+        "summary": summary,
+        "detectionIndicators": indicators,
+        "recommendedActions": recommended_actions,
+        "avatarGuidance": {
+            "mood": avatar_mood,
+            "speechText": speech_text,
+            "accentColor": accent_color,
+            "recommendedActionPrimary": recommended_actions[0] if recommended_actions else "Tutup Halaman",
+            "recommendedActionSecondary": "Pelajari Modus Ini"
+        },
+        "analyzedAt": datetime.now(timezone.utc).isoformat(),
+        "latencyMs": latency_ms
+    }
+

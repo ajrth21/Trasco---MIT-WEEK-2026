@@ -1,0 +1,18 @@
+{
+  "name": "@trasco/shared-types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript definitions and interfaces for TRASCO ecosystem",
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [
+    "cybersecurity",
+    "scam-detection",
+    "types"
+  ],
+  "author": "TRASCO Team",
+  "license": "MIT"
+}
+

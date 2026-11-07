@@ -1,0 +1,17 @@
+{
+  "name": "@trasco/extension",
+  "version": "1.0.0",
+  "description": "TRASCO AI Cyber Guardian Browser Extension (Chrome & Edge Manifest V3)",
+  "scripts": {
+    "test": "echo \"Ready for unpacked loading at chrome://extensions\""
+  },
+  "keywords": [
+    "cybersecurity",
+    "browser-extension",
+    "manifest-v3",
+    "scam-detection"
+  ],
+  "author": "TRASCO Team",
+  "license": "MIT"
+}
+
