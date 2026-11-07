@@ -425,7 +425,10 @@
       try {
         const res = await fetch('http://localhost:8000/api/v1/detect/analyze', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Trasco-Source': 'Dashboard-Client'
+          },
           body: JSON.stringify({ scanType: currentMode, content: text })
         });
 

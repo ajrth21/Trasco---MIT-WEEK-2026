@@ -4,7 +4,9 @@ const BASE_URL = 'http://localhost:8000';
 
 export async function fetchSecurityOverview(): Promise<SecurityOverviewData> {
   try {
-    const res = await fetch(`${BASE_URL}/api/v1/analytics/overview`);
+    const res = await fetch(`${BASE_URL}/api/v1/analytics/overview`, {
+      headers: { 'X-Trasco-Source': 'Dashboard-Client' }
+    });
     if (!res.ok) throw new Error('Failed to fetch analytics');
     return await res.json();
   } catch (err) {
@@ -72,7 +74,9 @@ export async function fetchSecurityOverview(): Promise<SecurityOverviewData> {
 
 export async function fetchFullHistory(): Promise<any[]> {
   try {
-    const res = await fetch(`${BASE_URL}/api/v1/analytics/history`);
+    const res = await fetch(`${BASE_URL}/api/v1/analytics/history`, {
+      headers: { 'X-Trasco-Source': 'Dashboard-Client' }
+    });
     if (!res.ok) throw new Error('Failed to fetch history');
     return await res.json();
   } catch (err) {
@@ -84,7 +88,10 @@ export async function scanContent(scanType: string, content: string): Promise<An
   const endpoint = scanType === 'IMAGE' ? '/api/v1/detect/analyze-image' : '/api/v1/detect/analyze';
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-Trasco-Source': 'Dashboard-Client'
+    },
     body: JSON.stringify({ scanType, content })
   });
   if (!res.ok) {

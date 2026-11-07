@@ -74,35 +74,65 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 });
 
-// Tab Navigation Listener (Proactive URL Checking)
+// In-memory cache & debounce timer to eliminate request flooding and quota exhaustion
+const domainScanCache = new Map(); // key: hostname, val: { result, expiresAt }
+let navigationDebounceTimer = null;
+
+// Tab Navigation Listener (Proactive URL Checking - Hardened with Debounce & Cache)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith('http')) {
-    chrome.storage.local.get(['protectionEnabled', 'backendUrl'], async (cfg) => {
-      if (!cfg.protectionEnabled) return;
+    if (navigationDebounceTimer) clearTimeout(navigationDebounceTimer);
 
-      try {
-        const urlObj = new URL(tab.url);
-        // Skip scanning local development or search engines by default
-        if (['localhost', '127.0.0.1', 'google.com', 'www.google.com'].includes(urlObj.hostname)) {
-          return;
-        }
+    navigationDebounceTimer = setTimeout(() => {
+      chrome.storage.local.get(['protectionEnabled', 'backendUrl'], async (cfg) => {
+        if (!cfg.protectionEnabled) return;
 
-        const result = await analyzeContent('URL', tab.url, { sourceDomain: urlObj.hostname });
-        // Only trigger avatar if threat is detected (MEDIUM or HIGH)
-        if (result && result.riskLevel !== 'LOW') {
-          chrome.tabs.sendMessage(tabId, {
-            type: 'SCAN_RESULT',
-            payload: result
+        try {
+          const urlObj = new URL(tab.url);
+          const hostname = urlObj.hostname;
+
+          // Skip scanning local development or search engines by default
+          if (['localhost', '127.0.0.1', 'google.com', 'www.google.com'].includes(hostname)) {
+            return;
+          }
+
+          // Check in-memory cache (10 min TTL)
+          const now = Date.now();
+          if (domainScanCache.has(hostname)) {
+            const cached = domainScanCache.get(hostname);
+            if (cached.expiresAt > now) {
+              if (cached.result && cached.result.riskLevel !== 'LOW') {
+                chrome.tabs.sendMessage(tabId, { type: 'SCAN_RESULT', payload: cached.result });
+              }
+              return;
+            }
+          }
+
+          // Run passive heuristic scan (Does NOT consume Gemini API quota)
+          const result = await analyzeContent('URL', tab.url, { 
+            sourceDomain: hostname,
+            mode: 'passive_heuristic' 
           });
+
+          // Cache result
+          domainScanCache.set(hostname, { result, expiresAt: now + (10 * 60 * 1000) });
+
+          // Only trigger avatar if threat is detected (MEDIUM or HIGH)
+          if (result && result.riskLevel !== 'LOW') {
+            chrome.tabs.sendMessage(tabId, {
+              type: 'SCAN_RESULT',
+              payload: result
+            });
+          }
+        } catch (e) {
+          // Silent fail for background proactive scans to preserve smooth browsing
         }
-      } catch (e) {
-        // Silent fail for background proactive scans to preserve smooth browsing
-      }
-    });
+      });
+    }, 400); // 400ms debounce
   }
 });
 
-// Core API communication
+// Core API communication with Security Handshake Header
 async function analyzeContent(scanType, content, metadata = {}) {
   const cfg = await chrome.storage.local.get(['backendUrl']);
   const baseUrl = cfg.backendUrl || 'http://localhost:8000';
@@ -110,11 +140,17 @@ async function analyzeContent(scanType, content, metadata = {}) {
 
   const res = await fetch(`${baseUrl}${endpoint}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-Trasco-Source': 'Extension-Local'
+    },
     body: JSON.stringify({
       scanType,
       content,
-      metadata
+      metadata: {
+        mode: metadata.mode || 'active_deep',
+        ...metadata
+      }
     })
   });
 

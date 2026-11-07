@@ -351,8 +351,12 @@
       riskBadge.textContent = `${data.riskLevel} RISK (${data.riskScore}/100)`;
       riskBadge.className = `risk-badge badge-${data.riskLevel.toLowerCase()}`;
 
-      // Update Text & Mood
-      speechText.innerHTML = `<strong>${data.summary}</strong>`;
+      // Update Text & Mood safely (Anti-DOM-XSS Hardened)
+      speechText.textContent = '';
+      const summaryStrong = document.createElement('strong');
+      summaryStrong.textContent = data.summary || 'Aktivitas terverifikasi aman.';
+      speechText.appendChild(summaryStrong);
+
       orb.classList.remove('high-risk', 'medium-risk');
 
       if (data.riskLevel === 'HIGH') {
@@ -378,16 +382,27 @@
         primaryBtn.style.display = 'none';
       }
 
-      // Populate Indicators
+      // Populate Indicators safely without innerHTML
       if (data.detectionIndicators && data.detectionIndicators.length > 0) {
-        indicatorsBox.innerHTML = '';
+        indicatorsBox.textContent = '';
         data.detectionIndicators.forEach((ind) => {
           const item = document.createElement('div');
           item.className = 'indicator-item';
-          item.innerHTML = `
-            <span class="indicator-dot" style="background: ${data.avatarGuidance.accentColor}"></span>
-            <span><strong>${ind.indicator}:</strong> ${ind.explanation}</span>
-          `;
+
+          const dot = document.createElement('span');
+          dot.className = 'indicator-dot';
+          dot.style.background = (data.avatarGuidance && data.avatarGuidance.accentColor) ? data.avatarGuidance.accentColor : '#ef4444';
+
+          const textSpan = document.createElement('span');
+          const titleStrong = document.createElement('strong');
+          titleStrong.textContent = (ind.indicator || '') + ': ';
+          const explText = document.createTextNode(ind.explanation || '');
+
+          textSpan.appendChild(titleStrong);
+          textSpan.appendChild(explText);
+
+          item.appendChild(dot);
+          item.appendChild(textSpan);
           indicatorsBox.appendChild(item);
         });
         indicatorsBox.style.display = 'flex';

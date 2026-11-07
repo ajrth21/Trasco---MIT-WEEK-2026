@@ -8,12 +8,34 @@ from app.models.user import User, SecurityPreference
 from app.models.detection import DetectionLog
 from app.services.risk_scorer import orchestrate_detection
 from app.services.analytics_service import compute_security_overview
+from app.core.scrubber import scrub_pii
 
 app = Flask("trasco_api")
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Ensure database tables exist
 Base.metadata.create_all(bind=engine)
+
+
+@app.before_request
+def verify_request_security():
+    """Security Handshake Gatekeeper: Blocks unauthorized web origins from probing local backend."""
+    # Always allow preflight OPTIONS and health check
+    if request.method == "OPTIONS" or request.path in ["/health", "/docs", "/openapi.json"]:
+        return None
+
+    # Verify origin or client header
+    origin = request.headers.get("Origin", "")
+    trasco_source = request.headers.get("X-Trasco-Source", "")
+    
+    # Allow if originating from extension, localhost, or has client signature
+    is_extension = origin.startswith("chrome-extension://") or origin.startswith("edge-extension://")
+    is_local = "localhost" in origin or "127.0.0.1" in origin or origin == "" or not origin
+    is_signed = trasco_source in ["Extension-Local", "Dashboard-Client"]
+
+    if not (is_extension or is_local or is_signed):
+        return jsonify({"error": "Unauthorized request origin. Blocked by TRASCO local firewall."}), 403
+    return None
 
 
 @app.route("/health", methods=["GET"])
@@ -38,10 +60,10 @@ def analyze_content():
 
     result = orchestrate_detection(scan_type, content, metadata)
 
-    # Persist log to DB
+    # Persist log to DB with UU PDP Data Minimization
     db = SessionLocal()
     try:
-        snippet = content[:100]
+        snippet = scrub_pii(content[:100])
         target_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
         log_entry = DetectionLog(
             id=result["scanId"],

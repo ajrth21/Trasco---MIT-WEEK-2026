@@ -27,6 +27,8 @@ def orchestrate_detection(scan_type: str, content: str, metadata: Dict[str, Any]
     speech_text = "Status aman. TRASCO terus menjaga aktivitas digital Anda."
     accent_color = "#10B981"  # Emerald
 
+    mode = (metadata or {}).get("mode", "active_deep")
+
     # Step 1: Run Heuristics
     if scan_type == "URL":
         h_result = analyze_url_heuristics(content)
@@ -45,26 +47,29 @@ def orchestrate_detection(scan_type: str, content: str, metadata: Dict[str, Any]
     else:
         h_score = 0
 
-    # Step 2: Run Gemini AI (Multimodal / Text)
+    # Step 2: Run Gemini AI (Only for active user-triggered scans to conserve 15 RPM quota)
     ai_result = None
-    if scan_type in ["URL", "TEXT"]:
-        ai_result = analyze_with_gemini(scan_type, content)
-    elif scan_type == "IMAGE":
-        ai_result = analyze_image_with_gemini(content)
+    if mode != "passive_heuristic":
+        if scan_type in ["URL", "TEXT"]:
+            ai_result = analyze_with_gemini(scan_type, content)
+        elif scan_type == "IMAGE":
+            ai_result = analyze_image_with_gemini(content)
 
-    # Step 3: Hybrid Score Fusion
+    # Step 3: Hybrid Score Fusion & Anti-Prompt-Injection Gatekeeper
     if ai_result:
         ai_score = ai_result.get("confidenceScore", 0)
         ai_category = ai_result.get("threatCategory", "SAFE")
         
         # If AI found indicators, incorporate them
         for ind in ai_result.get("aiIndicators", []):
-            # Avoid duplicate indicators
             if not any(existing["indicator"] == ind.get("indicator") for existing in indicators):
                 indicators.append(ind)
 
-        # Weighted calculation (60% AI contextual + 40% deterministic heuristics if heuristic triggered)
-        if h_score > 0:
+        # Gatekeeper Rule: If deterministic heuristics found high danger,
+        # LLM CANNOT lower the score below heuristic threshold (Mitigating Indirect Prompt Injection)
+        if h_score >= 70:
+            final_score = max(h_score, int((0.5 * ai_score) + (0.5 * h_score)))
+        elif h_score > 0:
             final_score = int((0.6 * ai_score) + (0.4 * h_score))
         else:
             final_score = ai_score
