@@ -17,6 +17,9 @@ export type ThreatCategory =
   | 'SOCIAL_ENGINEERING'
   | 'MALICIOUS_DOWNLOAD'
   | 'SUSPICIOUS_PROMOTION'
+  | 'PINJOL_ILLEGAL'
+  | 'INVESTMENT_FRAUD'
+  | 'EMERGENCY_IMPERSONATION'
   | 'UNKNOWN_THREAT';
 
 export type SeverityLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
@@ -48,6 +51,7 @@ export interface AnalyzeRequest {
     sourceDomain?: string;
     clientTimestamp?: string;
     userAgent?: string;
+    mode?: 'passive_heuristic' | 'active_deep';
   };
 }
 
@@ -63,4 +67,3 @@ export interface AnalyzeResponse {
   analyzedAt: string;
   latencyMs?: number;
 }
-

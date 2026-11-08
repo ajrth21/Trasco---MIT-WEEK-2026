@@ -26,7 +26,7 @@
       justify-content: space-between;
       border-bottom: 1px solid #334155;
       padding-bottom: 12px;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
     .brand {
@@ -36,7 +36,7 @@
     }
 
     .brand-icon {
-      font-size: 20px;
+      font-size: 22px;
     }
 
     .brand-text h1 {
@@ -70,6 +70,47 @@
       border-radius: 50%;
       background: #10b981;
       animation: pulse 1.5s infinite;
+    }
+
+    /* Engine Heartbeat Bar */
+    .engine-heartbeat {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 11px;
+      margin-bottom: 14px;
+    }
+
+    .engine-status-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .engine-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #94a3b8;
+      transition: all 0.3s;
+    }
+
+    .engine-text {
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+
+    .engine-retry {
+      background: none;
+      border: none;
+      color: #38bdf8;
+      cursor: pointer;
+      font-size: 10px;
+      text-decoration: underline;
     }
 
     .section-title {
@@ -261,6 +302,15 @@
     </div>
   </div>
 
+  <!-- Live Backend Connection Bar -->
+  <div class="engine-heartbeat">
+    <div class="engine-status-left">
+      <span id="backendStatusDot" class="engine-dot"></span>
+      <span id="backendStatusText" class="engine-text">Memeriksa Backend Engine...</span>
+    </div>
+    <button id="btnRetryEngine" class="engine-retry">Periksa Ulang</button>
+  </div>
+
   <div class="section-title">Pengaturan Proteksi</div>
   <div class="toggles-box">
     <div class="toggle-row">
@@ -287,7 +337,7 @@
     <textarea id="scanInput" class="scan-input" placeholder="Tempel teks chat, SMS penipuan, atau URL yang mencurigakan..."></textarea>
     <button id="btnScan" class="btn-scan">
       <span>⚡</span>
-      <span>Pindai dengan AI</span>
+      <span>Pindai dengan AI Engine</span>
     </button>
     <div id="scanResult" class="result-box"></div>
   </div>
@@ -306,4 +356,3 @@
   <script src="popup.js"></script>
 </body>
 </html>
-

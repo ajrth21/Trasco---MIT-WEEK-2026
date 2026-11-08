@@ -1,5 +1,6 @@
 /**
  * TRASCO AI Cyber Guardian - Background Service Worker (Manifest V3)
+ * Orchestrates threat detection, caching, context menus, and toolbar badge states.
  */
 
 const DEFAULT_CONFIG = {
@@ -15,22 +16,47 @@ chrome.runtime.onInstalled.addListener(() => {
     chrome.storage.local.set(stored);
   });
 
-  // Context menu for selected text
-  chrome.contextMenus.create({
-    id: 'trasco-scan-text',
-    title: '🛡️ Periksa dengan TRASCO (AI Scam Check)',
-    contexts: ['selection']
+  // Re-create context menus cleanly
+  chrome.contextMenus.removeAll(() => {
+    // Context menu for selected text
+    chrome.contextMenus.create({
+      id: 'trasco-scan-text',
+      title: '🛡️ Periksa dengan TRASCO (AI Scam Check)',
+      contexts: ['selection']
+    });
+
+    // Context menu for images (e.g. transfer slips, fake promos)
+    chrome.contextMenus.create({
+      id: 'trasco-scan-image',
+      title: '🔍 Verifikasi Bukti Transfer dengan TRASCO',
+      contexts: ['image']
+    });
   });
 
-  // Context menu for images (e.g. transfer slips, fake promos)
-  chrome.contextMenus.create({
-    id: 'trasco-scan-image',
-    title: '🔍 Verifikasi Bukti Transfer dengan TRASCO',
-    contexts: ['image']
-  });
-
-  console.log('[TRASCO] Service Worker installed and context menus registered.');
+  console.log('[TRASCO] Service Worker installed, context menus registered.');
 });
+
+// Update Extension Toolbar Badge Icon
+function updateBadge(tabId, riskLevel) {
+  if (!tabId || !chrome.action) return;
+
+  if (riskLevel === 'HIGH') {
+    chrome.action.setBadgeText({ tabId, text: '!' });
+    chrome.action.setBadgeBackgroundColor({ tabId, color: '#EF4444' }); // Red alert
+  } else if (riskLevel === 'MEDIUM') {
+    chrome.action.setBadgeText({ tabId, text: '?' });
+    chrome.action.setBadgeBackgroundColor({ tabId, color: '#F59E0B' }); // Warning amber
+  } else if (riskLevel === 'LOW') {
+    chrome.action.setBadgeText({ tabId, text: '✓' });
+    chrome.action.setBadgeBackgroundColor({ tabId, color: '#10B981' }); // Safe green
+  } else {
+    chrome.action.setBadgeText({ tabId, text: '' });
+  }
+}
+
+// In-memory cache & debounce timer to eliminate request flooding and quota exhaustion
+const domainScanCache = new Map(); // key: hostname, val: { result, expiresAt }
+let navigationDebounceTimer = null;
 
 // Context Menu Click Handler
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
@@ -45,6 +71,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
     try {
       const result = await analyzeContent('TEXT', info.selectionText, { sourceDomain: tab.url });
+      updateBadge(tab.id, result.riskLevel);
+
       chrome.tabs.sendMessage(tab.id, {
         type: 'SCAN_RESULT',
         payload: result
@@ -53,30 +81,32 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       console.error('[TRASCO] Scan error:', err);
       chrome.tabs.sendMessage(tab.id, {
         type: 'SCAN_ERROR',
-        error: 'Gagal terhubung ke TRASCO Backend Engine.'
+        error: 'Gagal terhubung ke TRASCO Backend Engine. Pastikan server aktif.'
       });
     }
   } else if (info.menuItemId === 'trasco-scan-image' && info.srcUrl) {
     chrome.tabs.sendMessage(tab.id, {
       type: 'SCAN_START',
-      payload: { snippet: 'Memverifikasi bukti transfer...' }
+      payload: { snippet: 'Memverifikasi keaslian bukti transfer/gambar...' }
     });
 
     try {
       const result = await analyzeContent('IMAGE', info.srcUrl, { sourceDomain: tab.url });
+      updateBadge(tab.id, result.riskLevel);
+
       chrome.tabs.sendMessage(tab.id, {
         type: 'SCAN_RESULT',
         payload: result
       });
     } catch (err) {
       console.error('[TRASCO] Image scan error:', err);
+      chrome.tabs.sendMessage(tab.id, {
+        type: 'SCAN_ERROR',
+        error: 'Gagal menganalisis gambar. Pastikan URL gambar dapat diakses.'
+      });
     }
   }
 });
-
-// In-memory cache & debounce timer to eliminate request flooding and quota exhaustion
-const domainScanCache = new Map(); // key: hostname, val: { result, expiresAt }
-let navigationDebounceTimer = null;
 
 // Tab Navigation Listener (Proactive URL Checking - Hardened with Debounce & Cache)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -93,6 +123,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
           // Skip scanning local development or search engines by default
           if (['localhost', '127.0.0.1', 'google.com', 'www.google.com'].includes(hostname)) {
+            updateBadge(tabId, 'LOW');
             return;
           }
 
@@ -101,6 +132,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           if (domainScanCache.has(hostname)) {
             const cached = domainScanCache.get(hostname);
             if (cached.expiresAt > now) {
+              updateBadge(tabId, cached.result.riskLevel);
               if (cached.result && cached.result.riskLevel !== 'LOW') {
                 chrome.tabs.sendMessage(tabId, { type: 'SCAN_RESULT', payload: cached.result });
               }
@@ -116,8 +148,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
           // Cache result
           domainScanCache.set(hostname, { result, expiresAt: now + (10 * 60 * 1000) });
+          updateBadge(tabId, result.riskLevel);
 
-          // Only trigger avatar if threat is detected (MEDIUM or HIGH)
+          // Only trigger avatar visually if threat is detected (MEDIUM or HIGH)
           if (result && result.riskLevel !== 'LOW') {
             chrome.tabs.sendMessage(tabId, {
               type: 'SCAN_RESULT',
@@ -129,6 +162,26 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         }
       });
     }, 400); // 400ms debounce
+  }
+});
+
+// Update Badge on Tab Switching
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    if (!tab || !tab.url || !tab.url.startsWith('http')) {
+      updateBadge(activeInfo.tabId, null);
+      return;
+    }
+    const hostname = new URL(tab.url).hostname;
+    if (domainScanCache.has(hostname)) {
+      const cached = domainScanCache.get(hostname);
+      if (cached && cached.result) {
+        updateBadge(activeInfo.tabId, cached.result.riskLevel);
+      }
+    }
+  } catch (e) {
+    // Tab might be closed or special page
   }
 });
 
@@ -165,9 +218,13 @@ async function analyzeContent(scanType, content, metadata = {}) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'TRIGGER_SCAN') {
     analyzeContent(message.scanType, message.content, message.metadata)
-      .then(res => sendResponse({ success: true, data: res }))
+      .then(res => {
+        if (sender.tab && sender.tab.id) {
+          updateBadge(sender.tab.id, res.riskLevel);
+        }
+        sendResponse({ success: true, data: res });
+      })
       .catch(err => sendResponse({ success: false, error: err.message }));
     return true; // Keep message channel open for async response
   }
 });
-
