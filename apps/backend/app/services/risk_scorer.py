@@ -65,17 +65,29 @@ def orchestrate_detection(scan_type: str, content: str, metadata: Dict[str, Any]
             if not any(existing["indicator"] == ind.get("indicator") for existing in indicators):
                 indicators.append(ind)
 
-        # Gatekeeper Rule: If deterministic heuristics found high danger,
-        # LLM CANNOT lower the score below heuristic threshold (Mitigating Indirect Prompt Injection)
+        # --- ISSUE-SEC-02: Universal Heuristic Risk Floor ---
+        # The deterministic heuristic engine is the trust anchor. An LLM response
+        # (which may have been manipulated via indirect prompt injection) is NEVER
+        # allowed to push the final score below what the heuristic engine found.
+        #
+        # Tier 1 (h_score >= 70 — CRITICAL): LLM cannot lower below h_score.
+        #   Weighted blend is only used if it would RAISE the score.
+        # Tier 2 (h_score > 0 — MEDIUM/LOW findings): Blend AI + heuristic,
+        #   but clamp the result so final_score >= h_score (risk floor).
+        # Tier 3 (h_score == 0 — no heuristic findings): Defer to AI score.
         if h_score >= 70:
             final_score = max(h_score, int((0.5 * ai_score) + (0.5 * h_score)))
         elif h_score > 0:
-            final_score = int((0.6 * ai_score) + (0.4 * h_score))
+            blended = int((0.6 * ai_score) + (0.4 * h_score))
+            final_score = max(h_score, blended)
         else:
             final_score = ai_score
 
+        # Preserve heuristic threat category when LLM says SAFE but heuristics disagree
         if ai_category != "SAFE":
             category = ai_category
+        # If AI says SAFE but heuristics found a real threat, keep heuristic category
+        # (prevents LLM from erasing the threat classification)
 
         summary = ai_result.get("summary", summary)
         recommended_actions = ai_result.get("recommendedActions", recommended_actions)
