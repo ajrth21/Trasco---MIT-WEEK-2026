@@ -1,0 +1,155 @@
+name: TRASCO Quality Gate & CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - feature/**
+  pull_request:
+    branches:
+      - main
+      - master
+      - feature/**
+
+permissions:
+  contents: read
+
+jobs:
+  backend-validation:
+    name: Backend & Security Validation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: apps/backend/requirements.txt
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Backend & Security Tests
+        env:
+          GEMINI_API_KEY: ""
+        run: |
+          python -c "
+          from tests.test_heuristics import *
+          test_url_heuristic_phishing()
+          test_url_heuristic_official_domain()
+          test_text_heuristic_otp_and_deposit()
+          test_text_heuristic_safe()
+          test_risk_level_boundaries()
+          test_orchestration_high_risk()
+
+          from tests.test_security_scrubber import *
+          test_pii_scrubber_otp()
+          test_pii_scrubber_phone_number()
+          test_pii_scrubber_email()
+          test_pii_scrubber_bank_account()
+          test_anti_prompt_injection_gatekeeper()
+
+          from tests.test_security_hardening import *
+          test_sec01_health_no_origin()
+          test_sec01_reject_external_origin()
+          test_sec01_reject_external_origin_with_localhost_substring()
+          test_sec01_reject_wrong_port_origin()
+          test_sec01_allow_dashboard_origin()
+          test_sec01_allow_extension_origin()
+          test_sec01_reject_missing_handshake_header()
+          test_sec01_no_origin_header_allowed()
+          test_sec02_critical_heuristic_cannot_be_downgraded()
+          test_sec02_medium_heuristic_preserves_floor()
+          test_sec02_safe_text_stays_low()
+          test_sec02_prompt_injection_blocked()
+          test_sec02_url_typosquatting_critical()
+          test_sec02_safe_url_stays_low()
+          test_sec03_phone_continuous_digits()
+          test_sec03_phone_hyphenated()
+          test_sec03_phone_spaced()
+          test_sec03_phone_plus62()
+          test_sec03_phone_plus62_spaced()
+          test_sec03_phone_62_no_plus()
+          test_sec03_no_false_positive_on_short_numbers()
+          test_sec03_no_false_positive_on_6digit()
+          test_sec03_preserves_existing_scrubbers()
+
+          print('All 34 backend & security test cases passed successfully.')
+          "
+
+  dashboard-validation:
+    name: Dashboard & Contracts Validation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/dashboard
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/dashboard/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Type Check (TypeScript & Shared Contracts)
+        run: npx tsc --noEmit
+
+      - name: Build Dashboard
+        run: npm run build
+
+  extension-validation:
+    name: Browser Extension Validation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/extension
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate Manifest JSON
+        run: |
+          node -e "
+          const fs = require('fs');
+          const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+          if (manifest.manifest_version !== 3) {
+            console.error('Invalid manifest_version: must be 3');
+            process.exit(1);
+          }
+          if (!manifest.name || !manifest.version) {
+            console.error('Missing name or version');
+            process.exit(1);
+          }
+          console.log('Manifest V3 validation passed:', manifest.name, 'v' + manifest.version);
+          "
+
+      - name: Validate JavaScript Syntax
+        run: |
+          node --check src/background/service-worker.js
+          node --check src/content/content-script.js
+          node --check src/popup/popup.js
+          echo "Extension JavaScript syntax check passed."
+
