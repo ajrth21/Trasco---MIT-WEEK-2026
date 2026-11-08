@@ -24,17 +24,22 @@ def verify_request_security():
     if request.method == "OPTIONS" or request.path in ["/health", "/docs", "/openapi.json"]:
         return None
 
-    # Verify origin or client header
     origin = request.headers.get("Origin", "")
     trasco_source = request.headers.get("X-Trasco-Source", "")
-    
-    # Allow if originating from extension, localhost, or has client signature
-    is_extension = origin.startswith("chrome-extension://") or origin.startswith("edge-extension://")
-    is_local = "localhost" in origin or "127.0.0.1" in origin or origin == "" or not origin
-    is_signed = trasco_source in ["Extension-Local", "Dashboard-Client"]
 
-    if not (is_extension or is_local or is_signed):
-        return jsonify({"error": "Unauthorized request origin. Blocked by TRASCO local firewall."}), 403
+    # 1. Browser Origin Verification (Strict Origin Isolation)
+    if origin:
+        is_extension = origin.startswith("chrome-extension://") or origin.startswith("edge-extension://")
+        is_local = "localhost" in origin or "127.0.0.1" in origin
+        
+        # Reject any external web origin regardless of custom headers spoofing
+        if not (is_extension or is_local):
+            return jsonify({"error": "Unauthorized web origin. Blocked by TRASCO local firewall."}), 403
+
+        # Local and extension origins must carry valid handshake signature
+        if trasco_source not in ["Extension-Local", "Dashboard-Client"]:
+            return jsonify({"error": "Missing or invalid TRASCO client handshake header."}), 403
+
     return None
 
 
