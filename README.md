@@ -8,7 +8,7 @@
 
 ---
 
-## 🌟 Executive Summary
+## Executive Summary
 
 **TRASCO (Trap & Scope)** adalah platform keamanan siber terpadu yang dirancang khusus untuk melindungi generasi muda Indonesia dari ancaman penipuan digital yang semakin marak—seperti penipuan lowongan kerja paruh waktu *like & subscribe*, modus deposit dana, pencurian OTP, situs phishing perbankan (*typosquatting*), hingga bukti transfer palsu (*fake payment slip*).
 
@@ -19,7 +19,7 @@ TRASCO dibangun di atas tiga pilar utama:
 
 ---
 
-## 🏛️ System Architecture
+## System Architecture
 
 ```text
 TRASCO ECOSYSTEM (MONOREPO)
@@ -34,7 +34,7 @@ TRASCO ECOSYSTEM (MONOREPO)
 
 ---
 
-## 🚀 Panduan Memulai Cepat (Quick Start)
+## Panduan Memulai Cepat (Quick Start)
 
 ### 1. Menjalankan Backend Engine
 Pastikan Python 3.10+ telah terpasang di komputer Anda.
@@ -55,7 +55,7 @@ python -m app.flask_app
 3. Aktifkan **Developer mode** (Mode pengembang) di pojok kanan atas.
 4. Klik **Load unpacked** (Muat yang belum dibongkar).
 5. Arahkan dan pilih folder: `apps/extension` di dalam repositori ini.
-6. Ekstensi **TRASCO Cyber Guardian (🛡️)** siap digunakan dan akan muncul di toolbar.
+6. Ekstensi **TRASCO Cyber Guardian** siap digunakan dan akan muncul di toolbar.
 
 ### 3. Membuka Web Dashboard
 Buka file `apps/dashboard/standalone_dashboard.html` langsung di browser Anda:
@@ -67,11 +67,11 @@ npm run dev
 
 ---
 
-## 🛡️ Skenario Demonstrasi Utama (Demo Scenarios)
+## Skenario Demonstrasi Utama (Demo Scenarios)
 
 1. **Uji Coba Teks Penipuan (Social Engineering / Job Scam):**
    - Seleksi teks: *"Lowongan kerja freelance like video komisi 500rb/hari, transfer deposit 50rb dan kirimkan kode OTP WA Anda."*
-   - Klik kanan -> Pilih **"🛡️ Periksa dengan TRASCO"**.
+   - Klik kanan -> Pilih **" Periksa dengan TRASCO"**.
    - Avatar otomatis mengintervensi dengan status **CRITICAL SHIELD (Merah)** dan mengeluarkan peringatan suara edukasi berbahasa Indonesia.
 
 2. **Uji Coba Phishing & Typosquatting:**
@@ -86,7 +86,7 @@ Detail lengkap skrip presentasi 5 menit tersedia di: [docs/demo_scenarios.md](do
 
 ---
 
-## 🔒 Privasi & Keamanan (Security by Design)
+## Privasi & Keamanan (Security by Design)
 
 - **Shadow DOM Encapsulation:** Komponen UI avatar di-render di dalam isolated Shadow Root tertutup sehingga stylesheet dan JavaScript halaman target tidak dapat memanipulasi peringatan keamanan.
 - **Kepatuhan UU PDP No. 27/2022:** Ekstensi menerapkan prinsip minimisasi data. Tidak ada perekaman riwayat penelusuran secara menyeluruh; hanya potongan teks atau domain berisiko yang dipindai saat pengguna memintanya.
@@ -94,7 +94,7 @@ Detail lengkap skrip presentasi 5 menit tersedia di: [docs/demo_scenarios.md](do
 
 ---
 
-## 👥 Tim Pengembang
+## Tim Pengembang
 
 Dibuat dengan dedikasi untuk **MIT UNMUL 2026 Hackathon Web Development**  
 *Membangun Ruang Digital yang Lebih Aman dan Cerdas bagi Generasi Muda Indonesia.*
