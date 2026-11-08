@@ -42,6 +42,7 @@ jobs:
       - name: Run Backend & Security Tests (pytest)
         env:
           GEMINI_API_KEY: ""
+          PYTHONPATH: "."
         run: |
           pytest -v
 
