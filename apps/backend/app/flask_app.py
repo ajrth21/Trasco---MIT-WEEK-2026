@@ -11,7 +11,23 @@ from app.services.analytics_service import compute_security_overview
 from app.core.scrubber import scrub_pii
 
 app = Flask("trasco_api")
-CORS(app, resources={r"/*": {"origins": "*"}})
+
+# --- ISSUE-SEC-01: Strict Origin Allowlist (replaces wildcard CORS) ---
+# Exact local origins that are trusted for both CORS and the application gatekeeper.
+_TRUSTED_LOCAL_ORIGINS = {
+    "http://localhost:5173",      # Vite dashboard dev server
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",      # Backend self-referencing (rare)
+    "http://127.0.0.1:8000",
+}
+# flask-cors origin list: includes the exact origins + regex patterns for
+# dynamic browser extension IDs (chrome-extension://<id>, edge-extension://<id>).
+TRUSTED_ORIGINS = list(_TRUSTED_LOCAL_ORIGINS) + [
+    r"^chrome-extension://.*$",   # Chrome extension (any ID)
+    r"^edge-extension://.*$",     # Edge extension (any ID)
+]
+
+CORS(app, resources={r"/*": {"origins": TRUSTED_ORIGINS}}, supports_credentials=False)
 
 # Ensure database tables exist
 Base.metadata.create_all(bind=engine)
@@ -19,22 +35,39 @@ Base.metadata.create_all(bind=engine)
 
 @app.before_request
 def verify_request_security():
-    """Security Handshake Gatekeeper: Blocks unauthorized web origins from probing local backend."""
-    # Always allow preflight OPTIONS and health check
+    """Security Handshake Gatekeeper: Blocks unauthorized web origins from probing local backend.
+
+    Defence-in-depth layers:
+      1. CORS pre-flight already restricts browser cross-origin requests to the allowlist.
+      2. This middleware enforces origin validation at the application layer as a second barrier.
+      3. X-Trasco-Source is treated as a *client identifier* for logging, NOT as authentication.
+    """
+    # Always allow preflight OPTIONS and the unauthenticated health probe
     if request.method == "OPTIONS" or request.path in ["/health", "/docs", "/openapi.json"]:
         return None
 
-    # Verify origin or client header
     origin = request.headers.get("Origin", "")
     trasco_source = request.headers.get("X-Trasco-Source", "")
-    
-    # Allow if originating from extension, localhost, or has client signature
-    is_extension = origin.startswith("chrome-extension://") or origin.startswith("edge-extension://")
-    is_local = "localhost" in origin or "127.0.0.1" in origin or origin == "" or not origin
-    is_signed = trasco_source in ["Extension-Local", "Dashboard-Client"]
 
-    if not (is_extension or is_local or is_signed):
-        return jsonify({"error": "Unauthorized request origin. Blocked by TRASCO local firewall."}), 403
+    # --- Layer 1: Browser Origin Verification (Strict Allowlist) ---
+    if origin:
+        is_extension = (
+            origin.startswith("chrome-extension://")
+            or origin.startswith("edge-extension://")
+        )
+        is_trusted_local = origin in _TRUSTED_LOCAL_ORIGINS
+
+        # Reject any origin not on the allowlist
+        if not (is_extension or is_trusted_local):
+            return jsonify({"error": "Unauthorized web origin. Blocked by TRASCO local firewall."}), 403
+
+    # --- Layer 2: Client Identifier Header ---
+    # When a browser Origin is present, the caller MUST also identify itself.
+    # This prevents a random trusted-origin page from accidentally hitting the API.
+    # NOTE: X-Trasco-Source is NOT authentication — it is a defence-in-depth signal.
+    if origin and trasco_source not in ("Extension-Local", "Dashboard-Client"):
+        return jsonify({"error": "Missing or invalid TRASCO client handshake header."}), 403
+
     return None
 
 
@@ -149,4 +182,7 @@ def get_history():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    # ISSUE-SEC-01: Bind to loopback only — prevents DNS rebinding attacks
+    # and network-adjacent access. The extension and dashboard both connect
+    # to localhost:8000 / 127.0.0.1:8000 exclusively.
+    app.run(host="127.0.0.1", port=8000, debug=True)

@@ -41,3 +41,4 @@ def test_anti_prompt_injection_gatekeeper():
     assert res["riskScore"] >= 70
     assert res["riskLevel"] == "HIGH"
     assert res["avatarGuidance"]["mood"] == "CRITICAL_SHIELD"
+
