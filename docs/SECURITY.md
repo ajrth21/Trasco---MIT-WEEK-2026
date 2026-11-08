@@ -52,9 +52,21 @@ In [`apps/extension/manifest.json`](../apps/extension/manifest.json):
 - `background`:
   - Ephemeral Service Worker (`service_worker.js`, type `module`).
 
-### C. Handshake Header & Origin Verification
+### C. Handshake Header & Origin Verification (SEC-01 Hardened)
 In [`apps/backend/app/flask_app.py`](../apps/backend/app/flask_app.py):
 ```python
+_TRUSTED_LOCAL_ORIGINS = {
+    "http://localhost:5173",      # Vite dashboard dev server
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",      # Backend self-referencing
+    "http://127.0.0.1:8000",
+}
+TRUSTED_ORIGINS = list(_TRUSTED_LOCAL_ORIGINS) + [
+    r"^chrome-extension://.*$",   # Chrome extension
+    r"^edge-extension://.*$",     # Edge extension
+]
+CORS(app, resources={r"/*": {"origins": TRUSTED_ORIGINS}}, supports_credentials=False)
+
 @app.before_request
 def verify_request_security():
     if request.method == "OPTIONS" or request.path in ["/health", "/docs", "/openapi.json"]:
@@ -63,17 +75,22 @@ def verify_request_security():
     origin = request.headers.get("Origin", "")
     trasco_source = request.headers.get("X-Trasco-Source", "")
 
-    is_extension = origin.startswith("chrome-extension://") or origin.startswith("edge-extension://")
-    is_local = "localhost" in origin or "127.0.0.1" in origin or origin == "" or not origin
-    is_signed = trasco_source in ["Extension-Local", "Dashboard-Client"]
+    # Layer 1: Strict Allowlist Match (Eliminating Substring Exploits)
+    if origin:
+        is_extension = origin.startswith("chrome-extension://") or origin.startswith("edge-extension://")
+        is_trusted_local = origin in _TRUSTED_LOCAL_ORIGINS
+        if not (is_extension or is_trusted_local):
+            return jsonify({"error": "Unauthorized web origin. Blocked by TRASCO local firewall."}), 403
 
-    if not (is_extension or is_local or is_signed):
-        return jsonify({"error": "Unauthorized request origin. Blocked by TRASCO local firewall."}), 403
+    # Layer 2: Client Identifier Signal (Defense in Depth)
+    if origin and trasco_source not in ("Extension-Local", "Dashboard-Client"):
+        return jsonify({"error": "Missing or invalid TRASCO client handshake header."}), 403
+
     return None
 ```
 
-> **Documented Limitation:**  
-> The presence of wildcard CORS `CORS(app, resources={r"/*": {"origins": "*"}})`, combined with `is_signed` logic alone, could allow a public webpage sending a custom `X-Trasco-Source` header to satisfy the condition if the browser completes preflight. Hardening to explicitly reject external origin hosts regardless of custom headers is planned.
+> **Mitigated Risk:**  
+> Wildcard CORS has been completely removed. Server binds strictly to loopback `127.0.0.1:8000` to prevent DNS rebinding and LAN probing. Exact set lookup prevents spoofed hostnames such as `localhost.attacker.com`.
 
 ### D. UU PDP Privacy Compliance & PII Scrubber
 In [`apps/backend/app/core/scrubber.py`](../apps/backend/app/core/scrubber.py):
