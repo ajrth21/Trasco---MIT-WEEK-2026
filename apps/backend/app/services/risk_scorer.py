@@ -50,10 +50,14 @@ def orchestrate_detection(scan_type: str, content: str, metadata: Dict[str, Any]
     # Step 2: Run Gemini AI (Only for active user-triggered scans to conserve 15 RPM quota)
     ai_result = None
     if mode != "passive_heuristic":
-        if scan_type in ["URL", "TEXT"]:
-            ai_result = analyze_with_gemini(scan_type, content)
-        elif scan_type == "IMAGE":
-            ai_result = analyze_image_with_gemini(content)
+        try:
+            if scan_type in ["URL", "TEXT"]:
+                ai_result = analyze_with_gemini(scan_type, content)
+            elif scan_type == "IMAGE":
+                ai_result = analyze_image_with_gemini(content)
+        except Exception:
+            # Graceful fallback: on any unexpected AI failure/network error, rely on heuristics
+            ai_result = None
 
     # Step 3: Hybrid Score Fusion & Anti-Prompt-Injection Gatekeeper
     if ai_result:

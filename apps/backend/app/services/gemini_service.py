@@ -26,7 +26,7 @@ Lakukan klasifikasi dan berikan output strictly dalam format JSON:
 {
   "isScam": true/false,
   "confidenceScore": 0 to 100,
-  "threatCategory": "PHISHING_URL" | "TYPOSQUATTING" | "FAKE_JOB_OFFER" | "OTP_THEFT" | "DEPOSIT_SCAM" | "SOCIAL_ENGINEERING" | "SAFE",
+  "threatCategory": "PHISHING_URL" | "TYPOSQUATTING" | "FAKE_JOB_OFFER" | "OTP_THEFT" | "DEPOSIT_SCAM" | "PINJOL_ILLEGAL" | "INVESTMENT_FRAUD" | "EMERGENCY_IMPERSONATION" | "SOCIAL_ENGINEERING" | "SAFE",
   "summary": "Ringkasan analisis bahasa Indonesia dalam 1-2 kalimat lugas",
   "aiIndicators": [
     {
