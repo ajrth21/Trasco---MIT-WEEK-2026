@@ -40,7 +40,7 @@ def orchestrate_image_detection(content: str, mime_type: str, metadata: Dict[str
             "threatCategory": None,
             "summary": val_error.message if val_error else "Validasi citra gagal.",
             "detectionIndicators": [],
-            "recommendedActions": ["Unggah file bukti transfer asli dalam format JPEG, PNG, atau WebP (maks. 5MB)."],
+            "recommendedActions": ["Unggah gambar yang valid dalam format JPEG, PNG, atau WebP (maks. 5MB)."],
             "avatarGuidance": {
                 "mood": "CAUTION_ALERT",
                 "speechText": "Peringatan: Format gambar tidak valid atau tidak didukung.",
@@ -69,14 +69,14 @@ def orchestrate_image_detection(content: str, mime_type: str, metadata: Dict[str
             "summary": ai_error.message if ai_error else "Analisis forensik citra tidak dapat diselesaikan.",
             "detectionIndicators": [],
             "recommendedActions": [
-                "Buka aplikasi m-banking resmi Anda dan periksa mutasi rekening secara langsung.",
-                "Jangan melepaskan dana atau pesanan sebelum dana terverifikasi masuk mutasi."
+                "Lakukan verifikasi manual secara independen melalui kontak resmi institusi terkait.",
+                "Jangan melakukan transfer dana atau memberikan data sensitif sebelum keaslian terkonfirmasi."
             ],
             "avatarGuidance": {
                 "mood": "CAUTION_ALERT",
-                "speechText": "Layanan AI tidak dapat menganalisis gambar. Periksa mutasi bank Anda secara manual.",
+                "speechText": "Layanan AI tidak dapat menganalisis gambar. Harap periksa keabsahan informasi secara manual.",
                 "accentColor": "#F59E0B",
-                "recommendedActionPrimary": "Cek Mutasi Manual",
+                "recommendedActionPrimary": "Periksa Manual",
                 "recommendedActionSecondary": "Coba Lagi Nanti"
             },
             "error": ai_error.model_dump() if ai_error else None,
@@ -95,11 +95,11 @@ def orchestrate_image_detection(content: str, mime_type: str, metadata: Dict[str
         final_score = max(0, min(34, int(100 - confidence)))
 
     risk_level = determine_risk_level(final_score)
-    category = ai_result.get("threatCategory", "FAKE_TRANSFER_SLIP" if is_scam else "SAFE")
-    summary = ai_result.get("summary", "Analisis visual bukti transfer selesai.")
+    category = ai_result.get("threatCategory", "SUSPICIOUS_PROMOTION" if is_scam else "SAFE")
+    summary = ai_result.get("summary", "Analisis visual gambar selesai.")
     indicators = ai_result.get("aiIndicators", [])
     recommended_actions = ai_result.get("recommendedActions", [
-        "Verifikasi transaksi melalui aplikasi perbankan resmi Anda."
+        "Verifikasi keaslian informasi melalui kanal atau kontak resmi terkait."
     ])
 
     if risk_level == "HIGH":

@@ -103,9 +103,9 @@ preserve. Never point it at `apps/backend/trasco.db`.
 
 | Capability | Status |
 |---|---|
-| URL and text detection | Implemented in the Flask API with deterministic heuristics; Gemini analysis is optional and has not been live-verified in this setup. |
+| URL and text detection | Implemented in the Flask API with deterministic heuristics, including online-gambling promotions, obfuscated text, and URL shorteners; Gemini analysis is optional and has not been live-verified in this setup. |
 | Image upload validation | Implemented in the extension popup and backend for JPEG, PNG, and WebP, with payload, dimensions, and pixel limits. |
-| Image scam analysis | Gemini Vision analysis is implemented but requires a configured key and an available upstream model. Without them, the API returns an unavailable/UNKNOWN result; a screenshot is not proof of payment. Live upstream operation has not been verified. |
+| Image scam analysis | Gemini Vision analysis covers suspicious promotions, fake documents, social engineering, malicious-download lures, and fake transfer slips; it requires a configured key and an available upstream model. Without them, the API returns an unavailable/UNKNOWN result; a screenshot is not proof of payment. Live upstream operation has not been verified. |
 | Scan persistence and analytics | Implemented with SQLAlchemy and SQLite. Failed image scans are stored with an UNKNOWN risk level and a sentinel score, not a numeric risk score. |
 | React dashboard | Implemented with overview, recent history, and a URL/text simulator. |
 | Continuous education | Limited to mitigation advice, scan recommendations, and simulator examples; this is not a separate learning or curriculum system. |
@@ -187,7 +187,7 @@ Edit `apps/backend/.env` and set `SECRET_KEY` to a fresh value. Generate one wit
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Paste the generated value into the local `.env`; do not commit that file. `DEBUG=true` is for local development only. `GEMINI_API_KEY` is optional: without it, URL/text scans use heuristics and image analysis returns an unavailable/UNKNOWN result. The configured default model identifier is `gemini-3.8-flash`; its availability and compatibility have not been verified by a live request.
+Paste the generated value into the local `.env`; do not commit that file. `DEBUG=true` is for local development only. `GEMINI_API_KEY` is optional: without it, URL/text scans use heuristics and image analysis returns an unavailable/UNKNOWN result. The configured default model identifier is `gemini-2.5-flash`; its availability and compatibility have not been verified by a live request.
 
 The example config uses `sqlite:///./trasco_local.db`, a separate local database filename. Initialize that database explicitly from `apps/backend`:
 
@@ -252,8 +252,9 @@ The image upload limit is 5 MiB decoded, with a 7 MiB Base64 string limit and a 
 ### Environment variables
 
 The primary Flask runner reads `SECRET_KEY`, `DEBUG`, `DATABASE_URL`,
-`GEMINI_API_KEY`, and `GEMINI_MODEL`. `SECRET_KEY` is required and must be at
-least 32 characters; production mode rejects the bundled insecure default.
+`GEMINI_API_KEY`, `GEMINI_MODEL`, and `GEMINI_IMAGE_TIMEOUT_SECONDS` (default
+15 seconds). `SECRET_KEY` is required and must be at least 32 characters;
+production mode rejects the bundled insecure default.
 `DEBUG=true` is for local development only. `DATABASE_URL` in the sample points
 to `trasco_local.db`. Gemini settings enable upstream analysis but do not
 guarantee that the configured model is available.

@@ -198,6 +198,32 @@ def test_url_shortener_in_text_negative_safe():
 
 
 # =====================================================================
+# Online gambling and obfuscated scam text tests
+# =====================================================================
+
+def test_online_gambling_promotion_detected():
+    text = "Slot gacor, bonus new member, deposit untuk klaim hadiah!"
+    res = analyze_text_heuristics(text)
+    assert res["threatCategory"] == "JUDI_ONLINE"
+    assert res["heuristicScore"] >= 40
+
+
+def test_obfuscated_online_gambling_promotion_detected():
+    text = "SAL.D0 50K UTK M'A1.N bareng PGS0F-T, auto max win!"
+    res = analyze_text_heuristics(text)
+    assert res["threatCategory"] == "JUDI_ONLINE"
+    assert res["heuristicScore"] >= 40
+
+
+def test_new_shortener_ln_run_detected_in_text():
+    text = "Periksa tautan https://ln.run/klaim-bonus"
+    res = analyze_text_heuristics(text)
+    assert res["threatCategory"] == "PHISHING_URL"
+    assert res["heuristicScore"] >= 25
+    assert any("Pemendek URL" in ind["indicator"] for ind in res["indicators"])
+
+
+# =====================================================================
 # Sprint 3 Expansion Tests: HOMOGLYPH & LOOKALIKE TYPOSQUATTING
 # =====================================================================
 

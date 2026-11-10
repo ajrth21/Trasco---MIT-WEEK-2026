@@ -14,35 +14,39 @@ except ImportError:
     GENAI_AVAILABLE = False
 
 IMAGE_SYSTEM_PROMPT = """
-Anda adalah TRASCO Image Forensics AI, spesialis verifikasi keaslian bukti transfer perbankan/e-wallet Indonesia (BCA, Mandiri, BRI, BNI, Dana, GoPay, QRIS) dan poster penipuan digital.
+Anda adalah TRASCO Image Forensics & Visual Scam Detector AI, sistem pakar pendeteksi penipuan visual dan rekayasa grafis digital di Indonesia.
 
-Tugas:
-Analisis apakah gambar ini merupakan bukti transfer fiktif/diedit (fake payment slip) atau konten giveaway/penipuan visual.
+Cakupan Deteksi:
+1. Poster/Brosur Giveaway, Undian Palsu, Lowongan Kerja Palsu, dan Modus Investasi Bodong.
+2. Tangkapan layar chat rekayasa (fake chat WhatsApp/Telegram mengatasnamakan instansi resmi, CS bank, atau pejabat).
+3. Modus APK berbahaya bertarget (brosur undangan pernikahan digital/paket kurir/surat tilang palsu).
+4. Pemalsuan dokumen, kwitansi, atau bukti transfer perbankan/e-wallet fiktif (fake transfer slip BCA, BRI, Mandiri, BNI, Dana, GoPay, OVO, QRIS).
+5. Phishing visual / QRIS palsu (QRIS tempelan di masjid/toko, login page perbankan palsu dalam bentuk tangkapan layar).
+
 Periksa:
-1. Konsistensi jenis font (font saldo beda ukuran, resolusi tidak merata, blur hanya di area nominal/nama).
-2. Layout dan header bank resmi vs editan aplikasi manipulasi instan.
-3. Keberadaan nomor referensi/transaksi valid.
-4. Tanda-tanda hasil screenshot rekayasa.
+1. Konten teks & klaim: Janji keuntungan tidak wajar, hadiah bombastis mencatut logo institusi resmi (BUMN, Kemensos, Bank), desakan transfer uang/DP klaim, iming-iming instan.
+2. Manipulasi grafis: Font tidak seragam, tata letak logo tidak resmi/resolusi pecah, manipulasi visual teks/nominal.
+3. Kredibilitas & legitimasi: Kontak yang dicantumkan (nomor WhatsApp pribadi alih-alih kanal resmi bercentang biru/domain resmi pemerintah/bank).
+4. Tanda-tanda rekayasa digital / hasil editan aplikasi generator hoax.
 
 Berikan output strictly dalam format JSON:
 {
   "isScam": true/false,
   "confidenceScore": 0 to 100,
-  "threatCategory": "FAKE_TRANSFER_SLIP" | "SUSPICIOUS_PROMOTION" | "SAFE",
-  "summary": "Analisis visual bukti transfer dalam 1-2 kalimat",
+  "threatCategory": "SUSPICIOUS_PROMOTION" | "FAKE_TRANSFER_SLIP" | "SOCIAL_ENGINEERING" | "MALICIOUS_DOWNLOAD" | "SAFE",
+  "summary": "Analisis visual dan kesimpulan indikasi penipuan dalam 1-2 kalimat lugas",
   "aiIndicators": [
     {
-      "indicator": "Nama temuan visual",
+      "indicator": "Nama temuan visual / indikasi penipuan",
       "severity": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
-      "explanation": "Penjelasan detail mengapa elemen grafis ini mencurigakan"
+      "explanation": "Penjelasan detail mengapa elemen grafis atau isi pesan dalam gambar ini berbahaya/mencurigakan"
     }
   ],
   "recommendedActions": [
-    "Cek mutasi rekening langsung melalui m-banking resmi Anda",
-    "Jangan kirim barang sebelum dana benar-benar masuk di rekening koran"
+    "Langkah mitigasi konkret yang harus dilakukan pengguna (misal: Jangan kirim uang, Abaikan tawaran, Hubungi kontak resmi institusi)"
   ],
   "avatarMood": "IDLE_VIGILANT" | "CAUTION_ALERT" | "CRITICAL_SHIELD",
-  "speechWarning": "Waspada! Bukti transfer ini memiliki indikasi editan grafis. Cek mutasi rekening Anda terlebih dahulu."
+  "speechWarning": "Pesan peringatan suara avatar yang tegas dan edukatif dalam Bahasa Indonesia."
 }
 """
 
@@ -84,16 +88,17 @@ def analyze_image_with_gemini(image_bytes: bytes, mime_type: str = "image/jpeg")
         }
 
         import socket
+        timeout_sec = getattr(settings, "GEMINI_IMAGE_TIMEOUT_SECONDS", 15.0)
         old_timeout = socket.getdefaulttimeout()
         try:
-            socket.setdefaulttimeout(8.0)
-            # Upstream call with 8.0s timeout target
+            socket.setdefaulttimeout(timeout_sec)
+            # Upstream call with configurable timeout target
             response = model.generate_content(
                 [
-                    "Verifikasi keaslian bukti transfer/gambar ini untuk mendeteksi penipuan:",
+                    "Analisis citra/gambar berikut secara mendalam untuk mendeteksi potensi penipuan digital, poster palsu, atau bukti transfer fiktif:",
                     image_part
                 ],
-                request_options={"timeout": 8.0}
+                request_options={"timeout": timeout_sec}
             )
         finally:
             socket.setdefaulttimeout(old_timeout)
@@ -124,7 +129,7 @@ def analyze_image_with_gemini(image_bytes: bytes, mime_type: str = "image/jpeg")
         if "deadline" in err_msg or "timed out" in err_msg or "timeout" in err_msg:
             return None, ErrorDetail(
                 code="VISION_TIMEOUT",
-                message="Permintaan analisis ke upstream Gemini Vision melebihi batas waktu 8.0 detik."
+                message=f"Permintaan analisis ke upstream Gemini Vision melebihi batas waktu {timeout_sec:.1f} detik."
             ), 504
         elif "quota" in err_msg or "429" in err_msg or "resourceexhausted" in err_msg:
             return None, ErrorDetail(

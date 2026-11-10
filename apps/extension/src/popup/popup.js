@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!selectedImageDataUrl) return;
 
       btnScanImage.disabled = true;
-      btnScanImage.innerHTML = '<span>⏳</span><span>Menganalisis Bukti Transfer...</span>';
+      btnScanImage.innerHTML = '<span>⏳</span><span>Menganalisis Gambar...</span>';
       imageScanResult.style.display = 'none';
 
       chrome.runtime.sendMessage(
@@ -302,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         (response) => {
           btnScanImage.disabled = false;
-          btnScanImage.innerHTML = '<span>🔍</span><span>Pindai Bukti Transfer</span>';
+          btnScanImage.innerHTML = '<span>🔍</span><span>Pindai Gambar</span>';
 
           if (chrome.runtime.lastError) {
             console.warn('[TRASCO] Runtime message error:', chrome.runtime.lastError.message);

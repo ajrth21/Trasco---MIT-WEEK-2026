@@ -29,7 +29,7 @@ SUSPICIOUS_TLDS = {
 # Known common URL shortener domains (indicates obfuscated destination)
 URL_SHORTENER_DOMAINS = {
     "bit.ly", "tinyurl.com", "t.co", "s.id", "cutt.ly",
-    "is.gd", "shorturl.at", "rb.gy", "rebrand.ly", "linktr.ee"
+    "is.gd", "shorturl.at", "rb.gy", "rebrand.ly", "linktr.ee", "ln.run"
 }
 
 # Lookalike homoglyph mapping: common digit/symbol to Latin substitutions
@@ -164,6 +164,15 @@ SCAM_TEXT_PATTERNS = [
         "indicator": "Klaim Nomor Baru Menyamar Sebagai Anggota Keluarga",
         "severity": "MEDIUM",
         "explanation": "Modus penyamaran nomor baru sebelum melancarkan permintaan transfer dana darurat."
+    },
+
+    # 5. JUDI_ONLINE / SLOT_SCAM (Judol & Obfuscated Slot Promotion)
+    {
+        "id": "JUDI_ONLINE",
+        "regex": r"(?i)(?:slot\s*(?:gacor|online|resmi|zeus|pragmatic|server)|(?:mahjong|pg\s*soft|pgsoft|pragmatic\s*play)|(?:pasti\s*(?:dikasih\s*)?menang|pasti\s*jp|auto\s*max\s*win|max\s*win)|(?:saldo\s*\d+k?\s*(?:utk|untuk)?\s*main|kasih\s*kamu\s*saldo|bagi2\s*saldo)|(?:w\.?d\s*\d+|withdraw\s*(?:lancar|jutaan|cepat))|(?:dp|depo)\s*(?:utk|untuk)?\s*klaim|bonus\s*new\s*member|klaim\s*bns|bonus\s*deposit)",
+        "indicator": "Promosi Judi Online & Jebakan Deposit Slot (Judol)",
+        "severity": "CRITICAL",
+        "explanation": "Pesan mempromosikan judi online ilegal (slot/mahjong/deposit bonus) yang kerap menggunakan taktik manipulasi iming-iming saldo dan tautan terselubung."
     }
 ]
 
@@ -320,18 +329,39 @@ def analyze_url_heuristics(url_str: str) -> Dict[str, Any]:
     }
 
 
+def deobfuscate_indonesian_scam_text(text: str) -> str:
+    """Normalizes leetspeak, interstitial punctuation, and obfuscation commonly used
+    by scammers to bypass regex filters (e.g., 'SAL.D0 50K UTK M\'A1.N', 'PGS0F-T', 'MA,XW,1N').
+    """
+    if not text:
+        return ""
+    deobf = re.sub(r"(?<=[a-zA-Z0-9])[.,'_-](?=[a-zA-Z0-9])", "", text)
+
+    leet_map = str.maketrans({
+        '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '8': 'b', '@': 'a', '$': 's'
+    })
+
+    def normalize_token(match: re.Match[str]) -> str:
+        token = match.group(0)
+        if sum(char.isalpha() for char in token) < 2:
+            return token.lower()
+        return token.lower().translate(leet_map)
+
+    return re.sub(r"[a-zA-Z0-9@$]+", normalize_token, deobf)
+
+
 def analyze_text_heuristics(text: str) -> Dict[str, Any]:
     """Scans text content for known Indonesian scam patterns."""
     indicators: List[Dict[str, str]] = []
     heuristic_score = 0
     threat_category = "SAFE"
 
-    # Check if text contains actual URL shortener link (e.g. bit.ly/..., s.id/...)
-    # This acts as an obfuscation risk signal (+20) when combined with other indicators
-    shortener_link_pattern = r"(?i)(?:https?://)?(?:www\.)?(?:bit\.ly|tinyurl\.com|t\.co|s\.id|cutt\.ly|is\.gd|shorturl\.at|rb\.gy|rebrand\.ly)/[a-zA-Z0-9_\-]+"
+    # Check if text contains actual URL shortener link (e.g. bit.ly/..., s.id/..., ln.run/...)
+    # This acts as an obfuscation risk signal when combined with other indicators
+    shortener_link_pattern = r"(?i)(?:https?://)?(?:www\.)?(?:bit\.ly|tinyurl\.com|t\.co|s\.id|cutt\.ly|is\.gd|shorturl\.at|rb\.gy|rebrand\.ly|ln\.run)/[a-zA-Z0-9_\-]+"
     has_shortener_link = bool(re.search(shortener_link_pattern, text))
     if has_shortener_link:
-        heuristic_score += 20
+        heuristic_score += 25
         indicators.append({
             "indicator": "Tautan Menggunakan Layanan Pemendek URL (Obfuscated Link)",
             "severity": "HIGH",
@@ -343,6 +373,7 @@ def analyze_text_heuristics(text: str) -> Dict[str, Any]:
     category_weights = {
         "OTP_THEFT": 90,
         "MALICIOUS_APK": 85,
+        "JUDI_ONLINE": 82,
         "EMERGENCY_IMPERSONATION": 80,
         "PINJOL_ILLEGAL": 75,
         "INVESTMENT_FRAUD": 70,
@@ -355,10 +386,13 @@ def analyze_text_heuristics(text: str) -> Dict[str, Any]:
     }
 
     current_highest_weight = 0
+    normalized_text = deobfuscate_indonesian_scam_text(text)
 
     for pattern in SCAM_TEXT_PATTERNS:
-        match = re.search(pattern["regex"], text)
-        if match:
+        # Check both raw text and deobfuscated text
+        match_raw = re.search(pattern["regex"], text)
+        match_norm = re.search(pattern["regex"], normalized_text)
+        if match_raw or match_norm:
             sev = pattern["severity"]
             weight = 40 if sev == "CRITICAL" else (25 if sev == "HIGH" else 15)
             heuristic_score += weight

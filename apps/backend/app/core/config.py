@@ -33,7 +33,8 @@ class Settings(SettingsBase):
 
     # AI API Keys & Models
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_IMAGE_TIMEOUT_SECONDS: float = float(os.getenv("GEMINI_IMAGE_TIMEOUT_SECONDS", "15.0"))
 
     # CORS
     CORS_ORIGINS: List[str] = ["*"]

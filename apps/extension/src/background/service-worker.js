@@ -25,10 +25,10 @@ chrome.runtime.onInstalled.addListener(() => {
       contexts: ['selection']
     });
 
-    // Context menu for images (e.g. transfer slips, fake promos)
+    // Context menu for images (e.g. transfer slips, fake promos, scam posters)
     chrome.contextMenus.create({
       id: 'trasco-scan-image',
-      title: '🔍 Verifikasi Bukti Transfer dengan TRASCO',
+      title: '🔍 Periksa Gambar dengan TRASCO (AI Scam Check)',
       contexts: ['image']
     });
   });
@@ -87,7 +87,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   } else if (info.menuItemId === 'trasco-scan-image' && info.srcUrl) {
     chrome.tabs.sendMessage(tab.id, {
       type: 'SCAN_START',
-      payload: { snippet: 'Memverifikasi keaslian bukti transfer/gambar...' }
+      payload: { snippet: 'Memeriksa potensi penipuan pada gambar...' }
     });
 
     try {
@@ -279,12 +279,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           threatCategory: null,
           confidenceScore: 0.0,
           detectionIndicators: [],
-          recommendedActions: ['Verifikasi bukti transfer melalui mutasi bank resmi Anda.'],
+          recommendedActions: ['Verifikasi keaslian gambar dan informasi melalui kontak resmi institusi terkait.'],
           avatarGuidance: {
             mood: 'CAUTION_ALERT',
-            speechText: 'Gagal terhubung ke Backend Engine. Verifikasi mutasi secara manual.',
+            speechText: 'Gagal terhubung ke Backend Engine. Verifikasi informasi secara manual.',
             accentColor: '#F59E0B',
-            recommendedActionPrimary: 'Periksa Mutasi Rekening',
+            recommendedActionPrimary: 'Periksa Manual',
             recommendedActionSecondary: 'Pastikan Backend Berjalan'
           },
           error: {
