@@ -14,26 +14,32 @@ export const ThreatRadar: React.FC<ThreatRadarProps> = ({ distribution }) => {
       <p className="text-xs text-slate-400 mb-6">Pola klasifikasi ancaman siber yang teridentifikasi</p>
 
       <div className="space-y-4">
-        {distribution.map((item, idx) => (
-          <div key={idx} className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-medium text-slate-300">{item.category}</span>
-              <span className="text-slate-400">{item.count} deteksi ({item.percentage}%)</span>
+        {distribution.length === 0 ? (
+          <p className="text-xs text-slate-500 py-6 text-center italic">
+            Belum ada ancaman terdeteksi (Riwayat pemindaian bersih).
+          </p>
+        ) : (
+          distribution.map((item, idx) => (
+            <div key={idx} className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium text-slate-300">{item.category}</span>
+                <span className="text-slate-400">{item.count} deteksi ({item.percentage}%)</span>
+              </div>
+              <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${
+                    item.category === 'SAFE'
+                      ? 'bg-emerald-500'
+                      : item.category.includes('JOB') || item.category.includes('OTP')
+                      ? 'bg-rose-500'
+                      : 'bg-amber-500'
+                  }`}
+                  style={{ width: `${item.percentage}%` }}
+                ></div>
+              </div>
             </div>
-            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-700 ${
-                  item.category === 'SAFE'
-                    ? 'bg-emerald-500'
-                    : item.category.includes('JOB') || item.category.includes('OTP')
-                    ? 'bg-rose-500'
-                    : 'bg-amber-500'
-                }`}
-                style={{ width: `${item.percentage}%` }}
-              ></div>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );

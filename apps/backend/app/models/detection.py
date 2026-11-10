@@ -13,9 +13,9 @@ class DetectionLog(Base):
     scan_type = Column(String(20), nullable=False)  # URL, TEXT, IMAGE
     target_hash = Column(String(64), index=True, nullable=True)  # SHA256 of content
     sanitized_snippet = Column(String(255), nullable=False)
-    risk_level = Column(String(20), nullable=False)  # LOW, MEDIUM, HIGH
-    risk_score = Column(Integer, nullable=False)  # 0 to 100
-    threat_category = Column(String(50), nullable=False)
+    risk_level = Column(String(20), nullable=False)  # LOW, MEDIUM, HIGH, UNKNOWN
+    risk_score = Column(Integer, nullable=False, default=-1)  # 0 to 100, or -1 as database-safe fallback for uncompleted/failed scans
+    threat_category = Column(String(50), nullable=False, default="UNKNOWN")  # Threat category or UNKNOWN for failed scans
     detection_indicators = Column(JSON, nullable=False, default=list)
     recommendations = Column(JSON, nullable=False, default=list)
     latency_ms = Column(Float, nullable=True)

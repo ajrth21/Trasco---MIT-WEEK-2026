@@ -13,7 +13,7 @@
   const host = document.createElement('div');
   host.id = 'trasco-cyber-guardian-host';
   document.body.appendChild(host);
-  const shadow = host.attachShadow({ mode: 'open' });
+  const shadow = host.attachShadow({ mode: 'closed' });
 
   // Inject Styles into Shadow DOM (Immune to external page CSS)
   const style = document.createElement('style');
@@ -406,7 +406,7 @@
   }
 
   // Handle Messages from Background Service Worker
-  chrome.runtime.onMessage.addListener((message) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'SCAN_START') {
       orb.className = 'avatar-orb interactive analyzing';
       card.classList.add('active');
@@ -418,23 +418,31 @@
       eyeLeft.setAttribute('fill', '#38BDF8');
       eyeRight.setAttribute('fill', '#38BDF8');
       avatarCore.setAttribute('fill', '#38BDF8');
+      if (typeof sendResponse === 'function') sendResponse({ received: true });
     } else if (message.type === 'SCAN_RESULT') {
-      const data = message.payload;
+      const data = message.payload || {};
       card.classList.add('active');
 
-      // Update Badge
-      riskBadge.textContent = `${data.riskLevel} RISK (${data.riskScore}/100)`;
-      riskBadge.className = `risk-badge badge-${data.riskLevel.toLowerCase()}`;
+      // Fail-closed status evaluation
+      const isFailedOrUnknown = !data.success || data.status !== 'COMPLETED' || data.riskLevel === 'UNKNOWN';
+      const isHighRisk = data.riskLevel === 'HIGH';
+      const isMediumRisk = data.riskLevel === 'MEDIUM' || isFailedOrUnknown;
+      const isLowRisk = data.riskLevel === 'LOW' && data.success && data.status === 'COMPLETED';
+
+      // Update Badge (Never show undefined/null/NaN)
+      const scoreText = (data.riskScore !== null && data.riskScore !== undefined) ? `${data.riskScore}/100` : 'Verifikasi Manual';
+      riskBadge.textContent = `${data.riskLevel || 'UNKNOWN'} RISK (${scoreText})`;
+      riskBadge.className = `risk-badge badge-${isHighRisk ? 'high' : (isLowRisk ? 'low' : 'medium')}`;
 
       // Update Text Safely (Anti-DOM-XSS Hardened)
       speechText.textContent = '';
       const summaryStrong = document.createElement('strong');
-      summaryStrong.textContent = data.summary || 'Aktivitas terverifikasi aman.';
+      summaryStrong.textContent = data.summary || (isFailedOrUnknown ? 'Pemeriksaan keamanan tidak selesai. Lakukan verifikasi manual ke pihak resmi.' : 'Aktivitas terverifikasi aman.');
       speechText.appendChild(summaryStrong);
 
       orb.className = 'avatar-orb interactive';
 
-      if (data.riskLevel === 'HIGH') {
+      if (isHighRisk) {
         orb.classList.add('high-risk');
         card.classList.add('high-risk-border');
         avatarShield.setAttribute('stroke', '#EF4444');
@@ -443,10 +451,10 @@
         eyeLeft.setAttribute('fill', '#EF4444');
         eyeRight.setAttribute('fill', '#EF4444');
         avatarCore.setAttribute('fill', '#EF4444');
-        primaryBtn.textContent = 'Tutup Halaman Ini';
+        primaryBtn.textContent = (data.avatarGuidance && data.avatarGuidance.recommendedActionPrimary) || 'Tutup Halaman Ini';
         primaryBtn.className = 'btn btn-danger';
         primaryBtn.style.display = 'inline-flex';
-      } else if (data.riskLevel === 'MEDIUM') {
+      } else if (isMediumRisk) {
         orb.classList.add('medium-risk');
         card.classList.remove('high-risk-border');
         avatarShield.setAttribute('stroke', '#F59E0B');
@@ -455,10 +463,11 @@
         eyeLeft.setAttribute('fill', '#F59E0B');
         eyeRight.setAttribute('fill', '#F59E0B');
         avatarCore.setAttribute('fill', '#F59E0B');
-        primaryBtn.textContent = 'Waspada & Periksa';
+        primaryBtn.textContent = (data.avatarGuidance && data.avatarGuidance.recommendedActionPrimary) || 'Waspada & Periksa';
         primaryBtn.className = 'btn btn-secondary';
         primaryBtn.style.display = 'inline-flex';
       } else {
+        // Strict verified LOW risk branch only
         card.classList.remove('high-risk-border');
         avatarShield.setAttribute('stroke', '#06B6D4');
         avatarShield.setAttribute('fill', '#0EA5E9');
@@ -468,6 +477,8 @@
         avatarCore.setAttribute('fill', '#10B981');
         primaryBtn.style.display = 'none';
       }
+
+      if (typeof sendResponse === 'function') sendResponse({ received: true });
 
       // Populate Indicators Safely without innerHTML
       if (data.detectionIndicators && data.detectionIndicators.length > 0) {

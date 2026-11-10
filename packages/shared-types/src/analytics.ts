@@ -5,7 +5,7 @@
 import { RiskLevel, ThreatCategory } from './detection';
 
 export interface ThreatDistribution {
-  category: ThreatCategory;
+  category: ThreatCategory | string;
   count: number;
   percentage: number;
 }
@@ -15,6 +15,7 @@ export interface RiskBreakdown {
   mediumRiskCount: number;
   highRiskCount: number;
   totalScans: number;
+  unknownRiskCount?: number;
 }
 
 export interface DailyScanTrend {
@@ -28,8 +29,8 @@ export interface ScanHistoryItem {
   scanType: 'URL' | 'TEXT' | 'IMAGE';
   sanitizedSnippet: string;
   riskLevel: RiskLevel;
-  riskScore: number;
-  threatCategory: ThreatCategory;
+  riskScore: number | null;
+  threatCategory: ThreatCategory | string | null;
   createdAt: string;
 }
 

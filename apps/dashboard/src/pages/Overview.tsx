@@ -133,7 +133,7 @@ export const Overview: React.FC<OverviewProps> = ({ data, onOpenSimulator }) => 
                   <div className="text-[10px] text-cyan-300 font-bold opacity-0 group-hover:opacity-100 transition-opacity">
                     {trend.scans} scan
                   </div>
-                  <div className="w-full max-w-[36px] bg-slate-800 rounded-t-lg relative overflow-hidden flex items-end">
+                  <div className="w-full max-w-[36px] h-36 bg-slate-800 rounded-t-lg relative overflow-hidden flex items-end">
                     <div
                       className="w-full bg-gradient-to-t from-cyan-600 to-sky-400 rounded-t-lg transition-all duration-500"
                       style={{ height: `${heightPct}%` }}
@@ -172,4 +172,3 @@ export const Overview: React.FC<OverviewProps> = ({ data, onOpenSimulator }) => 
     </div>
   );
 };
-

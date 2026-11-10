@@ -1,9 +1,11 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Tuple
 from app.services.heuristic_engine import analyze_url_heuristics, analyze_text_heuristics
 from app.services.gemini_service import analyze_with_gemini
+from app.services.image_validator import validate_image_payload
 from app.services.image_analyzer import analyze_image_with_gemini
+from app.schemas.detection import ErrorDetail
 
 
 def determine_risk_level(score: int) -> str:
@@ -14,8 +16,136 @@ def determine_risk_level(score: int) -> str:
     return "LOW"
 
 
+def orchestrate_image_detection(content: str, mime_type: str, metadata: Dict[str, Any] = None) -> Tuple[Dict[str, Any], int]:
+    """
+    Dedicated fail-closed orchestrator for IMAGE scam detection.
+    Enforces the 14-stage validation pipeline and strict fail-closed invariants.
+    Returns: (AnalyzeResponse dict, http_status_code)
+    """
+    start_time = datetime.now()
+    scan_id = str(uuid.uuid4())
+
+    # Step 1: 14-Stage Image Validation Pipeline
+    is_valid, decoded_bytes, val_error, val_status = validate_image_payload(content, mime_type)
+    if not is_valid:
+        # Determine status enum based on error code
+        status = "INVALID_REQUEST" if val_status == 400 or val_status == 413 else "INVALID_IMAGE"
+        latency_ms = round((datetime.now() - start_time).total_seconds() * 1000, 2)
+        return {
+            "success": False,
+            "status": status,
+            "scanId": scan_id,
+            "riskLevel": "UNKNOWN",
+            "riskScore": None,
+            "threatCategory": None,
+            "summary": val_error.message if val_error else "Validasi citra gagal.",
+            "detectionIndicators": [],
+            "recommendedActions": ["Unggah gambar yang valid dalam format JPEG, PNG, atau WebP (maks. 5MB)."],
+            "avatarGuidance": {
+                "mood": "CAUTION_ALERT",
+                "speechText": "Peringatan: Format gambar tidak valid atau tidak didukung.",
+                "accentColor": "#F59E0B",
+                "recommendedActionPrimary": "Unggah Ulang",
+                "recommendedActionSecondary": "Bantuan"
+            },
+            "error": val_error.model_dump() if val_error else None,
+            "analyzedAt": datetime.now(timezone.utc).isoformat(),
+            "latencyMs": latency_ms
+        }, val_status
+
+    # Step 2: Gemini Vision Multimodal Analysis
+    ai_result, ai_error, ai_status = analyze_image_with_gemini(decoded_bytes, mime_type)
+    if not ai_result:
+        # Fail-closed invariant on AI failure
+        status = "ANALYSIS_UNAVAILABLE" if ai_status == 503 else "ANALYSIS_FAILED"
+        latency_ms = round((datetime.now() - start_time).total_seconds() * 1000, 2)
+        return {
+            "success": False,
+            "status": status,
+            "scanId": scan_id,
+            "riskLevel": "UNKNOWN",
+            "riskScore": None,
+            "threatCategory": None,
+            "summary": ai_error.message if ai_error else "Analisis forensik citra tidak dapat diselesaikan.",
+            "detectionIndicators": [],
+            "recommendedActions": [
+                "Lakukan verifikasi manual secara independen melalui kontak resmi institusi terkait.",
+                "Jangan melakukan transfer dana atau memberikan data sensitif sebelum keaslian terkonfirmasi."
+            ],
+            "avatarGuidance": {
+                "mood": "CAUTION_ALERT",
+                "speechText": "Layanan AI tidak dapat menganalisis gambar. Harap periksa keabsahan informasi secara manual.",
+                "accentColor": "#F59E0B",
+                "recommendedActionPrimary": "Periksa Manual",
+                "recommendedActionSecondary": "Coba Lagi Nanti"
+            },
+            "error": ai_error.model_dump() if ai_error else None,
+            "analyzedAt": datetime.now(timezone.utc).isoformat(),
+            "latencyMs": latency_ms
+        }, ai_status
+
+    # Step 3: Map AI Result to COMPLETED Invariant
+    confidence = ai_result.get("confidenceScore", 0)
+    is_scam = ai_result.get("isScam", False)
+
+    # Calculate risk score
+    if is_scam:
+        final_score = max(35, min(100, int(confidence)))
+    else:
+        final_score = max(0, min(34, int(100 - confidence)))
+
+    risk_level = determine_risk_level(final_score)
+    category = ai_result.get("threatCategory", "SUSPICIOUS_PROMOTION" if is_scam else "SAFE")
+    summary = ai_result.get("summary", "Analisis visual gambar selesai.")
+    indicators = ai_result.get("aiIndicators", [])
+    recommended_actions = ai_result.get("recommendedActions", [
+        "Verifikasi keaslian informasi melalui kanal atau kontak resmi terkait."
+    ])
+
+    if risk_level == "HIGH":
+        accent_color = "#EF4444"
+        avatar_mood = "CRITICAL_SHIELD"
+    elif risk_level == "MEDIUM":
+        accent_color = "#F59E0B"
+        avatar_mood = "CAUTION_ALERT"
+    else:
+        accent_color = "#10B981"
+        avatar_mood = "IDLE_VIGILANT"
+
+    speech_text = ai_result.get("speechWarning", f"Status analisis {risk_level}. Tetap waspada saat bertransaksi.")
+    latency_ms = round((datetime.now() - start_time).total_seconds() * 1000, 2)
+
+    return {
+        "success": True,
+        "status": "COMPLETED",
+        "scanId": scan_id,
+        "riskLevel": risk_level,
+        "riskScore": final_score,
+        "threatCategory": category,
+        "summary": summary,
+        "detectionIndicators": indicators,
+        "recommendedActions": recommended_actions,
+        "avatarGuidance": {
+            "mood": avatar_mood,
+            "speechText": speech_text,
+            "accentColor": accent_color,
+            "recommendedActionPrimary": recommended_actions[0] if recommended_actions else "Tutup Halaman",
+            "recommendedActionSecondary": "Pelajari Modus Ini"
+        },
+        "error": None,
+        "analyzedAt": datetime.now(timezone.utc).isoformat(),
+        "latencyMs": latency_ms
+    }, 200
+
+
 def orchestrate_detection(scan_type: str, content: str, metadata: Dict[str, Any] = None) -> Dict[str, Any]:
-    """Orchestrates heuristic and AI detection, producing deterministic risk assessment."""
+    """Orchestrates heuristic and AI detection for URL and TEXT scans."""
+    if scan_type == "IMAGE":
+        # Safe forwarder if invoked generically
+        mime = (metadata or {}).get("mimeType", "image/jpeg")
+        res, _ = orchestrate_image_detection(content, mime, metadata)
+        return res
+
     start_time = datetime.now()
     indicators: List[Dict[str, Any]] = []
     category = "SAFE"
@@ -42,39 +172,27 @@ def orchestrate_detection(scan_type: str, content: str, metadata: Dict[str, Any]
         indicators.extend(h_result["indicators"])
         if h_result["threatCategory"] != "SAFE":
             category = h_result["threatCategory"]
-    elif scan_type == "IMAGE":
-        h_score = 0  # Heuristics for image will rely on visual inspection
     else:
         h_score = 0
 
-    # Step 2: Run Gemini AI (Only for active user-triggered scans to conserve 15 RPM quota)
+    # Step 2: Run Gemini AI (Only for active user-triggered scans to conserve quota)
     ai_result = None
     if mode != "passive_heuristic":
-        if scan_type in ["URL", "TEXT"]:
-            ai_result = analyze_with_gemini(scan_type, content)
-        elif scan_type == "IMAGE":
-            ai_result = analyze_image_with_gemini(content)
+        try:
+            if scan_type in ["URL", "TEXT"]:
+                ai_result = analyze_with_gemini(scan_type, content)
+        except Exception:
+            ai_result = None
 
     # Step 3: Hybrid Score Fusion & Anti-Prompt-Injection Gatekeeper
     if ai_result:
         ai_score = ai_result.get("confidenceScore", 0)
         ai_category = ai_result.get("threatCategory", "SAFE")
         
-        # If AI found indicators, incorporate them
         for ind in ai_result.get("aiIndicators", []):
             if not any(existing["indicator"] == ind.get("indicator") for existing in indicators):
                 indicators.append(ind)
 
-        # --- ISSUE-SEC-02: Universal Heuristic Risk Floor ---
-        # The deterministic heuristic engine is the trust anchor. An LLM response
-        # (which may have been manipulated via indirect prompt injection) is NEVER
-        # allowed to push the final score below what the heuristic engine found.
-        #
-        # Tier 1 (h_score >= 70 — CRITICAL): LLM cannot lower below h_score.
-        #   Weighted blend is only used if it would RAISE the score.
-        # Tier 2 (h_score > 0 — MEDIUM/LOW findings): Blend AI + heuristic,
-        #   but clamp the result so final_score >= h_score (risk floor).
-        # Tier 3 (h_score == 0 — no heuristic findings): Defer to AI score.
         if h_score >= 70:
             final_score = max(h_score, int((0.5 * ai_score) + (0.5 * h_score)))
         elif h_score > 0:
@@ -83,18 +201,14 @@ def orchestrate_detection(scan_type: str, content: str, metadata: Dict[str, Any]
         else:
             final_score = ai_score
 
-        # Preserve heuristic threat category when LLM says SAFE but heuristics disagree
         if ai_category != "SAFE":
             category = ai_category
-        # If AI says SAFE but heuristics found a real threat, keep heuristic category
-        # (prevents LLM from erasing the threat classification)
 
         summary = ai_result.get("summary", summary)
         recommended_actions = ai_result.get("recommendedActions", recommended_actions)
         avatar_mood = ai_result.get("avatarMood", avatar_mood)
         speech_text = ai_result.get("speechWarning", speech_text)
     else:
-        # Fallback to pure heuristics when Gemini is unavailable
         final_score = h_score
         if final_score >= 70:
             summary = f"Terdeteksi ancaman siber berisiko tinggi ({category.replace('_', ' ')}). Pola ancaman sesuai basis data modus penipuan."
@@ -114,11 +228,9 @@ def orchestrate_detection(scan_type: str, content: str, metadata: Dict[str, Any]
             avatar_mood = "CAUTION_ALERT"
             speech_text = "Hati-hati, ada indikasi mencurigakan. Periksa kembali sebelum melanjutkan."
 
-    # Clamp score to [0, 100]
     final_score = max(0, min(100, final_score))
     risk_level = determine_risk_level(final_score)
 
-    # Color mapping according to risk level
     if risk_level == "HIGH":
         accent_color = "#EF4444"
         avatar_mood = "CRITICAL_SHIELD"
@@ -132,6 +244,8 @@ def orchestrate_detection(scan_type: str, content: str, metadata: Dict[str, Any]
     latency_ms = round((datetime.now() - start_time).total_seconds() * 1000, 2)
 
     return {
+        "success": True,
+        "status": "COMPLETED",
         "scanId": str(uuid.uuid4()),
         "riskLevel": risk_level,
         "riskScore": final_score,
@@ -146,7 +260,7 @@ def orchestrate_detection(scan_type: str, content: str, metadata: Dict[str, Any]
             "recommendedActionPrimary": recommended_actions[0] if recommended_actions else "Tutup Halaman",
             "recommendedActionSecondary": "Pelajari Modus Ini"
         },
+        "error": None,
         "analyzedAt": datetime.now(timezone.utc).isoformat(),
         "latencyMs": latency_ms
     }
-

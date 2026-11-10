@@ -16,10 +16,12 @@ from app.services.risk_scorer import determine_risk_level, orchestrate_detection
 # gatekeeper without requiring a live network socket.
 
 def _get_test_client():
-    """Create a disposable Flask test client with an in-memory SQLite DB."""
-    import os
-    os.environ["DATABASE_URL"] = "sqlite:///:memory:"
-    # Re-import to pick up the in-memory DB for this test session
+    """Create a disposable Flask test client.
+
+    Database isolation is globally guaranteed by the `isolate_test_database`
+    session fixture in `conftest.py`, which patches `SessionLocal` to an
+    in-memory SQLite StaticPool engine before tests run.
+    """
     from app.flask_app import app
     app.config["TESTING"] = True
     return app.test_client()
