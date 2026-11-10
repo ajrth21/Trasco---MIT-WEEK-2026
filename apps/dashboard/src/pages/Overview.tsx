@@ -57,9 +57,15 @@ export const Overview: React.FC<OverviewProps> = ({ data, onOpenSimulator }) => 
             </div>
 
             <div className="text-center sm:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 mb-2">
+              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-2 ${
+                securityHygieneScore >= 80 
+                  ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+                  : securityHygieneScore >= 60
+                  ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
+                  : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
+              }`}>
                 <span>🛡️</span>
-                Status Keamanan: {securityHygieneScore >= 80 ? 'SANGAT TERLINDUNGI' : 'PERLU PERHATIAN'}
+                Status Keamanan: {securityHygieneScore >= 80 ? 'SANGAT TERLINDUNGI' : securityHygieneScore >= 60 ? 'WASPADA' : 'PERLU PERHATIAN'}
               </div>
               <h2 className="text-xl sm:text-2xl font-bold text-white">
                 Personal Scam Shield Aktif

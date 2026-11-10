@@ -231,6 +231,56 @@ async function broadcastToActiveTab(type, payload) {
 
 // Runtime Message Dispatcher
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'CHECK_CURRENT_TAB_URL') {
+    const pageUrl = message.url || (sender.tab && sender.tab.url);
+    if (!pageUrl || !pageUrl.startsWith('http')) {
+      sendResponse({ success: true, riskLevel: 'LOW' });
+      return false;
+    }
+
+    try {
+      const urlObj = new URL(pageUrl);
+      const hostname = urlObj.hostname;
+      const tabId = sender.tab && sender.tab.id;
+
+      if (['localhost', '127.0.0.1', 'google.com', 'www.google.com'].includes(hostname)) {
+        if (tabId) updateBadge(tabId, 'LOW');
+        sendResponse({ success: true, riskLevel: 'LOW' });
+        return false;
+      }
+
+      const now = Date.now();
+      if (domainScanCache.has(hostname)) {
+        const cached = domainScanCache.get(hostname);
+        if (cached.expiresAt > now) {
+          if (tabId) updateBadge(tabId, cached.result.riskLevel);
+          if (cached.result && cached.result.riskLevel !== 'LOW' && tabId) {
+            chrome.tabs.sendMessage(tabId, { type: 'SCAN_RESULT', payload: cached.result });
+          }
+          sendResponse({ success: true, data: cached.result });
+          return false;
+        }
+      }
+
+      analyzeContent('URL', pageUrl, { sourceDomain: hostname, mode: 'passive_heuristic' })
+        .then(result => {
+          domainScanCache.set(hostname, { result, expiresAt: now + (10 * 60 * 1000) });
+          if (tabId) updateBadge(tabId, result.riskLevel);
+          if (result && result.riskLevel !== 'LOW' && tabId) {
+            chrome.tabs.sendMessage(tabId, { type: 'SCAN_RESULT', payload: result });
+          }
+          sendResponse({ success: true, data: result });
+        })
+        .catch(err => {
+          sendResponse({ success: false, error: err.message });
+        });
+      return true; // async response
+    } catch (e) {
+      sendResponse({ success: false, error: e.message });
+      return false;
+    }
+  }
+
   if (message.type === 'TRIGGER_SCAN') {
     analyzeContent(message.scanType, message.content, message.metadata)
       .then(res => {

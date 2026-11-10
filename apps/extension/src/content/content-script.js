@@ -305,14 +305,14 @@
           <span>TRASCO AI GUARDIAN</span>
         </div>
         <div class="header-actions">
-          <div id="trasco-risk-badge" class="risk-badge badge-high">HIGH RISK</div>
+          <div id="trasco-risk-badge" class="risk-badge badge-low">STATUS AMAN</div>
           <button id="trasco-btn-audio" class="icon-btn" title="Dengarkan Peringatan Suara">🔊</button>
           <button id="trasco-close-card" class="icon-btn" title="Tutup">✕</button>
         </div>
       </div>
 
       <div class="card-body">
-        <p id="trasco-speech-text">Memindai aktivitas...</p>
+        <p id="trasco-speech-text">Perlindungan Real-Time aktif. Halaman ini terpantau aman.</p>
       </div>
 
       <div id="trasco-indicators-box" class="indicator-list" style="display: none;">
@@ -320,7 +320,7 @@
       </div>
 
       <div class="card-actions">
-        <button id="trasco-btn-primary" class="btn btn-danger">Tinggalkan Halaman</button>
+        <button id="trasco-btn-primary" class="btn btn-danger" style="display: none;">Tinggalkan Halaman</button>
         <button id="trasco-btn-dashboard" class="btn btn-info">Buka Dashboard</button>
         <button id="trasco-btn-dismiss" class="btn btn-secondary">Abaikan</button>
       </div>
@@ -521,6 +521,21 @@
       riskBadge.className = 'risk-badge badge-medium';
     }
   });
+
+  // Request proactive URL evaluation from Service Worker immediately upon page load
+  try {
+    chrome.runtime.sendMessage({
+      type: 'CHECK_CURRENT_TAB_URL',
+      url: window.location.href
+    }, (response) => {
+      // Handled via SCAN_RESULT if threat detected
+      if (chrome.runtime.lastError) {
+        // Service worker might be sleeping; silent fallback
+      }
+    });
+  } catch (err) {
+    // Silent catch
+  }
 
   console.log('[TRASCO] AI Cyber Guardian Avatar initialized in Shadow DOM.');
 })();
