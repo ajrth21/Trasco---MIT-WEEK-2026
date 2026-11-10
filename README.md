@@ -1,22 +1,16 @@
 # TRASCO — Trap & Scope
 
-TRASCO is a cybersecurity MVP for identifying common online scams affecting Indonesian users. It combines deterministic URL and text heuristics with an optional Google Gemini integration, a local analytics dashboard, and a Chromium browser extension.
+TRASCO adalah platform MVP keamanan siber untuk mendeteksi berbagai modus penipuan daring yang menyasar pengguna di Indonesia. Sistem ini menggabungkan analisis heuristik URL dan teks deterministik dengan integrasi opsional Google Gemini AI, dasbor analitik personal berbasis web, serta ekstensi peramban Chromium.
 
-The project was developed for the MIT UNMUL 2026 Web Development — Cybersecurity Track. Detection results are advisory: users should independently verify financial transactions and account notices through official channels.
+Proyek ini dikembangkan untuk ajang **MIT UNMUL 2026 Web Development — Cybersecurity Track**. Hasil deteksi bersifat sebagai panduan mitigasi (*advisory*): pengguna disarankan untuk selalu memverifikasi transaksi keuangan dan pemberitahuan akun secara mandiri melalui kanal resmi instansi terkait.
 
-## Quick start
+## Memulai Cepat (Quick Start)
 
-The backend and dashboard run as two local processes. Python 3.11 (the CI
-version), Node.js 20, and npm are recommended. Gemini is **optional** for URL
-and text scans, which retain deterministic heuristic analysis without a key.
-Gemini is required to analyze valid images; without it, validation still runs,
-then the API returns `ANALYSIS_UNAVAILABLE` with an `UNKNOWN` result.
+Backend dan dasbor berjalan sebagai dua proses lokal terpisah. Direkomendasikan menggunakan Python 3.11 (versi yang digunakan pada CI), Node.js 20, dan npm. Penggunaan Gemini bersifat **opsional** untuk pemindaian URL dan teks, yang tetap mempertahankan analisis heuristik deterministik tanpa kunci API. Gemini diperlukan untuk memindai citra/gambar; jika kunci tidak tersedia, validasi keamanan citra tetap berjalan dan API mengembalikan status `ANALYSIS_UNAVAILABLE` dengan hasil `UNKNOWN` (*fail-closed*).
 
 ### Windows PowerShell
 
-Run from the repository root. These commands create a virtual environment,
-install backend dependencies, and copy the sample environment file only if you
-do not already have a local `.env`:
+Jalankan perintah berikut dari direktori utama (*root*) repositori. Perintah ini membuat *virtual environment*, menginstal dependensi backend, dan menyalin contoh berkas konfigurasi jika belum memiliki berkas `.env` lokal:
 
 ```powershell
 py -3.11 -m venv apps\backend\.venv
@@ -25,21 +19,16 @@ Set-Location apps\backend
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Edit `apps/backend/.env`: set `SECRET_KEY` to a new value generated with
-`python -c "import secrets; print(secrets.token_hex(32))"`. Keep the key local
-and never commit `.env`. Set `GEMINI_API_KEY` only if you want to enable Gemini
-analysis; it is not required for heuristic URL/text scans. The default local
-database is `trasco_local.db`, not the protected `trasco.db`.
+Sunting berkas `apps/backend/.env`: atur `SECRET_KEY` dengan nilai baru yang dibuat menggunakan perintah `python -c "import secrets; print(secrets.token_hex(32))"`. Jaga kerahasiaan kunci dan jangan pernah melakukan commit berkas `.env`. Atur `GEMINI_API_KEY` jika ingin mengaktifkan analisis AI multimodal; kunci ini tidak wajib untuk analisis heuristik URL/teks. Basis data lokal bawaan menggunakan `trasco_local.db`, bukan `trasco.db` yang diproteksi.
 
-Initialize the local schema, then start the backend:
+Inisialisasi skema basis data lokal, kemudian jalankan backend:
 
 ```powershell
 .\.venv\Scripts\python.exe -m app.core.init_db --url sqlite:///./trasco_local.db --confirm-persistent
 .\.venv\Scripts\python.exe -m app.flask_app
 ```
 
-In a second PowerShell window, from the repository root, install and start the
-dashboard:
+Buka jendela PowerShell kedua, lalu dari direktori utama (*root*) repositori, pasang dependensi dan jalankan dasbor:
 
 ```powershell
 Set-Location apps\dashboard
@@ -47,8 +36,7 @@ npm ci
 npm run dev
 ```
 
-Open [http://127.0.0.1:5173](http://127.0.0.1:5173), select **Simulator**, and
-run a text or URL scan. You can also send a first text scan from PowerShell:
+Buka peramban di [http://127.0.0.1:5173](http://127.0.0.1:5173), pilih menu **Simulator**, dan jalankan pemindaian teks atau URL. Anda juga dapat mengirim pemindaian teks pertama melalui PowerShell:
 
 ```powershell
 $body = @{ scanType = 'TEXT'; content = 'Saya mendapat tawaran kerja, tetapi diminta membayar biaya deposit terlebih dahulu.' } | ConvertTo-Json
@@ -57,7 +45,7 @@ Invoke-RestMethod -Uri http://127.0.0.1:8000/api/v1/detect/analyze -Method Post 
 
 ### macOS/Linux
 
-Run from the repository root:
+Jalankan dari direktori utama (*root*) repositori:
 
 ```bash
 python3.11 -m venv apps/backend/.venv
@@ -67,17 +55,14 @@ cd apps/backend
 if [ ! -f .env ]; then cp .env.example .env; fi
 ```
 
-Edit `.env`: set `SECRET_KEY` to a fresh value from
-`python -c "import secrets; print(secrets.token_hex(32))"`. Keep `.env` local.
-`GEMINI_API_KEY` is optional for URL/text scans and required only to enable
-Gemini analysis, including image analysis.
+Sunting berkas `.env`: tetapkan `SECRET_KEY` baru menggunakan perintah `python -c "import secrets; print(secrets.token_hex(32))"`. Jaga kerahasiaan berkas `.env`. `GEMINI_API_KEY` bersifat opsional untuk pemindaian URL/teks dan hanya diperlukan untuk mengaktifkan analisis multimodal, termasuk pemindaian gambar penipuan.
 
 ```bash
 python -m app.core.init_db --url sqlite:///./trasco_local.db --confirm-persistent
 python -m app.flask_app
 ```
 
-In a second terminal from the repository root:
+Di jendela terminal kedua dari direktori utama repositori:
 
 ```bash
 cd apps/dashboard
@@ -85,8 +70,7 @@ npm ci
 npm run dev
 ```
 
-Open [http://127.0.0.1:5173](http://127.0.0.1:5173), select **Simulator**, and
-run a text or URL scan. For a command-line text scan:
+Buka [http://127.0.0.1:5173](http://127.0.0.1:5173), pilih **Simulator**, dan jalankan pemindaian teks atau URL. Untuk pemindaian teks langsung dari terminal:
 
 ```bash
 curl -sS -X POST http://127.0.0.1:8000/api/v1/detect/analyze \
@@ -95,69 +79,67 @@ curl -sS -X POST http://127.0.0.1:8000/api/v1/detect/analyze \
   -d '{"scanType":"TEXT","content":"Saya mendapat tawaran kerja, tetapi diminta membayar biaya deposit terlebih dahulu."}'
 ```
 
-The initializer creates missing tables but does not migrate an existing
-database. Use only a new local database that contains no data you need to
-preserve. Never point it at `apps/backend/trasco.db`.
+Skrip inisialisasi akan membuat tabel yang belum ada, namun tidak melakukan migrasi pada basis data yang sudah terisi. Gunakan basis data lokal baru yang tidak berisi data penting yang harus dipertahankan. Jangan pernah mengarahkannya ke `apps/backend/trasco.db`.
 
-## Features and current status
+## Fitur dan Status Saat Ini
 
-| Capability | Status |
+| Kemampuan | Status |
 |---|---|
-| URL and text detection | Implemented in the Flask API with deterministic heuristics, including online-gambling promotions, obfuscated text, and URL shorteners; Gemini analysis is optional and has not been live-verified in this setup. |
-| Image upload validation | Implemented in the extension popup and backend for JPEG, PNG, and WebP, with payload, dimensions, and pixel limits. |
-| Image scam analysis | Gemini Vision analysis covers suspicious promotions, fake documents, social engineering, malicious-download lures, and fake transfer slips; it requires a configured key and an available upstream model. Without them, the API returns an unavailable/UNKNOWN result; a screenshot is not proof of payment. Live upstream operation has not been verified. |
-| Scan persistence and analytics | Implemented with SQLAlchemy and SQLite. Failed image scans are stored with an UNKNOWN risk level and a sentinel score, not a numeric risk score. |
-| React dashboard | Implemented with overview, recent history, and a URL/text simulator. |
-| Continuous education | Limited to mitigation advice, scan recommendations, and simulator examples; this is not a separate learning or curriculum system. |
-| Browser extension | Manifest V3 extension with URL checks, selected-text scans, an avatar, and popup image upload. Context-menu image scans are not supported by the backend image endpoint yet. |
-| User accounts and preferences | Present in the alternative FastAPI runner; they are not exposed by the primary Flask runner or wired into the dashboard. |
+| Deteksi URL dan teks | Diimplementasikan pada Flask API dengan heuristik deterministik, mencakup promosi judi online, teks tersamarkan (*obfuscated/leetspeak*), dan pemendek tautan URL; analisis Gemini bersifat opsional. |
+| Validasi unggahan gambar | Diimplementasikan pada popup ekstensi dan backend untuk format JPEG, PNG, dan WebP, dengan batasan ketat ukuran payload, dimensi, dan jumlah piksel (*anti-decompression bomb*). |
+| Analisis penipuan gambar (Image Scam) | Analisis Gemini Vision mencakup promosi mencurigakan, dokumen fiktif, rekayasa sosial, jebakan unduhan APK berbahaya, dan bukti transfer palsu; membutuhkan kunci API aktif dan model upstream yang tersedia. Tanpa keduanya, API mengembalikan hasil `UNKNOWN` (*fail-closed*). |
+| Persistensi pemindaian & analitik | Diimplementasikan dengan SQLAlchemy dan SQLite. Pemindaian gambar yang gagal disimpan dengan tingkat risiko `UNKNOWN` dan skor sentinel, bukan skor risiko numerik buatan. |
+| Dasbor analitik React | Diimplementasikan dengan ringkasan keamanan (*Overview*), riwayat pemindaian (*History*), dan simulator penipuan interaktif. |
+| Edukasi berkelanjutan (Continuous Education) | Diintegrasikan dalam bentuk rekomendasi mitigasi keamanan adaptif, rincian indikator ancaman, dan studi kasus pada simulator. |
+| Ekstensi peramban (Chrome Extension) | Ekstensi Manifest V3 dengan pemeriksaan URL proaktif real-time, pemindaian seleksi teks, floating avatar interaktif, dan pemindaian gambar via popup. |
+| Akun pengguna dan preferensi | Tersedia pada alternatif runner FastAPI; tidak diekspos secara default oleh runner utama Flask. |
 
-## Architecture
+## Arsitektur
 
 ```mermaid
 flowchart LR
-  Browser[Chromium extension] -->|HTTP JSON| Flask[Flask API :8000]
-  Dashboard[React dashboard :5173] -->|HTTP JSON| Flask
-  Flask --> Heuristics[URL and text heuristics]
-  Flask --> Validator[Image validation]
-  Flask --> Gemini[Optional Google Gemini API]
-  Flask --> SQLite[(Local SQLite database)]
-  Dashboard -. shared contracts .-> Types[@trasco/shared-types]
+  Browser["Chromium Extension"] -->|HTTP JSON| Flask["Flask API :8000"]
+  Dashboard["React Dashboard :5173"] -->|HTTP JSON| Flask
+  Flask --> Heuristics["URL and Text Heuristics"]
+  Flask --> Validator["Image Validation Sandbox"]
+  Flask --> Gemini["Google Gemini Vision API"]
+  Flask --> SQLite[("Local SQLite Database")]
+  Dashboard -. shared contracts .-> Types["@trasco/shared-types"]
 ```
 
-The primary runnable backend is Flask (`apps/backend/app/flask_app.py`). A FastAPI application is also present as an alternative runner. Both use the backend service modules; their routing and CORS behavior are not identical. The dashboard imports its TypeScript contracts from `@trasco/shared-types`.
+Backend utama yang siap dijalankan adalah Flask (`apps/backend/app/flask_app.py`). Aplikasi FastAPI juga tersedia sebagai alternatif *runner*. Keduanya memanfaatkan modul layanan backend yang sama; perilaku routing dan CORS keduanya tidak identik. Dasbor mengimpor kontrak tipe data TypeScript langsung dari paket `@trasco/shared-types`.
 
-## Technology stack
+## Teknologi yang Digunakan
 
-- Python backend: Flask, SQLAlchemy, Pydantic, Pillow; optional FastAPI/Uvicorn runner.
-- AI integration: `google-generativeai` package, configured by `GEMINI_API_KEY` and `GEMINI_MODEL`.
-- Dashboard: React 18, TypeScript, Vite.
-- Extension: Chrome/Edge Manifest V3 JavaScript.
-- Database: SQLite by default, accessed through SQLAlchemy.
-- CI configuration uses Python 3.11 and Node.js 20. The backend dependency file uses version ranges rather than a fully pinned lockfile.
+- Backend Python: Flask, SQLAlchemy, Pydantic, Pillow; alternatif runner opsional menggunakan FastAPI/Uvicorn.
+- Integrasi AI: Paket resmi `google-generativeai`, dikonfigurasikan via `GEMINI_API_KEY` dan `GEMINI_MODEL`.
+- Dasbor Frontend: React 18, TypeScript, Vite, Tailwind CSS.
+- Ekstensi Peramban: JavaScript berbasis Chrome/Edge Manifest V3 (Shadow DOM terisolasi).
+- Basis Data: SQLite secara bawaan, diakses menggunakan ORM SQLAlchemy.
+- Konfigurasi CI: Menggunakan Python 3.11 dan Node.js 20. Berkas dependensi backend menggunakan batasan rentang versi yang aman.
 
-## Repository layout
+## Struktur Repositori
 
 ```text
 apps/
-  backend/       Flask/FastAPI API, detection services, persistence, and tests
-  dashboard/     React dashboard and standalone HTML dashboard
-  extension/     Load-unpacked Chromium extension
+  backend/       API Flask/FastAPI, modul layanan deteksi, persistensi, dan pengujian (tests)
+  dashboard/     Dasbor web React dan dasbor HTML mandiri
+  extension/     Ekstensi Chromium (mode load-unpacked)
 packages/
-  shared-types/  Canonical TypeScript contracts
-docs/            Project notes and reports
+  shared-types/  Kontrak tipe data kanonikal TypeScript terpadu
+docs/            Catatan arsitektur, laporan audit, dan panduan proyek
 ```
 
-## Prerequisites
+## Prasyarat Lingkungan
 
-- Python 3.11 (the version used by CI).
-- Node.js 20 and npm for the dashboard.
-- A Chromium browser to load the extension.
-- Internet access is needed for the dashboard's CDN-loaded Tailwind CSS and web font. A Gemini key and upstream access are optional for URL/text scans and required to analyze valid images beyond local validation.
+- Python 3.11 (versi yang digunakan pada automated CI).
+- Node.js 20 dan npm untuk dasbor.
+- Peramban berbasis Chromium (Google Chrome, Microsoft Edge, Brave) untuk memuat ekstensi.
+- Akses internet diperlukan untuk CDN Tailwind CSS dasbor dan Google Web Fonts. Kunci API Gemini dan koneksi internet diperlukan untuk analisis AI multimodal visual gambar.
 
-## Install and configure
+## Instalasi dan Konfigurasi
 
-From the repository root, create a virtual environment and install backend dependencies. The Quick Start above provides a complete first-run path.
+Dari direktori utama repositori, buat *virtual environment* dan pasang dependensi backend. Bagian Memulai Cepat di atas menyediakan alur langkah awal yang lengkap.
 
 **Windows PowerShell**
 
@@ -181,33 +163,33 @@ cd apps/backend
 if [ ! -f .env ]; then cp .env.example .env; fi
 ```
 
-Edit `apps/backend/.env` and set `SECRET_KEY` to a fresh value. Generate one with:
+Sunting berkas `apps/backend/.env` dan tetapkan `SECRET_KEY` baru. Buat nilai acak aman dengan:
 
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Paste the generated value into the local `.env`; do not commit that file. `DEBUG=true` is for local development only. `GEMINI_API_KEY` is optional: without it, URL/text scans use heuristics and image analysis returns an unavailable/UNKNOWN result. The configured default model identifier is `gemini-2.5-flash`; its availability and compatibility have not been verified by a live request.
+Tempelkan nilai yang dihasilkan ke dalam berkas `.env` lokal; jangan pernah memasukkan berkas ini ke dalam commit Git. Nilai `DEBUG=true` hanya ditujukan untuk pengembangan lokal. `GEMINI_API_KEY` bersifat opsional: tanpa kunci ini, pemindaian URL/teks menggunakan heuristik deterministik dan pemindaian citra mengembalikan status `UNKNOWN` (*fail-closed*). Konfigurasi model AI menggunakan `gemini-3.5-flash` dengan batas *timeout* yang adaptif.
 
-The example config uses `sqlite:///./trasco_local.db`, a separate local database filename. Initialize that database explicitly from `apps/backend`:
+Konfigurasi contoh menggunakan `sqlite:///./trasco_local.db`, berkas basis data lokal terpisah. Inisialisasi basis data tersebut secara eksplisit dari direktori `apps/backend`:
 
 ```bash
 python -m app.core.init_db --url sqlite:///./trasco_local.db --confirm-persistent
 ```
 
-The initializer refuses the protected `trasco.db` path and does not initialize a persistent database unless `--confirm-persistent` is supplied. Do not point it at a database containing user data.
+Skrip inisialisasi akan menolak berkas `trasco.db` yang diproteksi dan tidak akan memodifikasi basis data persisten kecuali parameter `--confirm-persistent` disertakan. Jangan pernah mengarahkannya ke basis data yang berisi data produksi pengguna.
 
-## Run the application
+## Menjalankan Aplikasi
 
-Start the primary Flask API from `apps/backend`:
+Jalankan API Flask utama dari direktori `apps/backend`:
 
 ```bash
 python -m app.flask_app
 ```
 
-It binds to `127.0.0.1:8000`. Check liveness at `http://127.0.0.1:8000/health` and readiness at `http://127.0.0.1:8000/health/ready`. Readiness remains unavailable until the configured database schema passes the compatibility check.
+Layanan akan berjalan pada `127.0.0.1:8000`. Periksa *liveness* di `http://127.0.0.1:8000/health` dan kesiapan (*readiness*) di `http://127.0.0.1:8000/health/ready`. Kesiapan berstatus `503` hingga skema basis data yang terkonfigurasi lolos pemeriksaan kompatibilitas.
 
-In another terminal, install and start the dashboard:
+Di terminal lain, pasang dependensi dan jalankan dasbor frontend:
 
 ```bash
 cd apps/dashboard
@@ -215,72 +197,55 @@ npm ci
 npm run dev
 ```
 
-The Vite server binds to `127.0.0.1:5173`. Open the URL printed by Vite. The standalone HTML page is not the recommended launch path; use the Vite-hosted dashboard so its origin matches the backend's local allowlist.
+Server Vite akan berjalan pada `127.0.0.1:5173`. Buka URL yang ditampilkan oleh Vite. Gunakan dasbor berbasis server Vite agar origin peramban sesuai dengan *allowlist* lokal backend.
 
-### Browser extension
+### Ekstensi Peramban (Browser Extension)
 
-1. Start the backend first.
-2. Open `chrome://extensions` or `edge://extensions`.
-3. Enable **Developer mode**, choose **Load unpacked**, and select `apps/extension`.
-4. Open the extension popup to scan text or upload a JPEG, PNG, or WebP image. The extension sends requests only to its configured local backend URL (default `http://localhost:8000`).
+1. Pastikan backend sudah berjalan terlebih dahulu pada port 8000.
+2. Buka `chrome://extensions` atau `edge://extensions` di peramban Anda.
+3. Aktifkan **Developer mode** (Mode Pengembang) di pojok kanan atas.
+4. Klik tombol **Load unpacked** (Muat yang belum dibongkar), lalu pilih direktori `apps/extension`.
+5. Buka popup ekstensi TRASCO untuk memindai teks atau mengunggah citra JPEG, PNG, atau WebP. Ekstensi hanya mengirimkan permintaan ke URL backend lokal yang terkonfigurasi (default `http://localhost:8000`).
 
-The extension requests `storage`, `activeTab`, and `contextMenus` permissions and injects its content script on `<all_urls>` to support page checks. Review browser permission prompts and use the extension only on pages where its behavior is appropriate. The extension has no build step. Its npm `test` script is only a placeholder; use the syntax checks below instead.
+Ekstensi meminta izin `storage`, `activeTab`, dan `contextMenus`, serta menginjeksikan skrip konten (*content script*) pada `<all_urls>` untuk mendukung pemantauan keamanan halaman web secara proaktif. Tinjau izin peramban dan gunakan ekstensi pada halaman yang relevan. Ekstensi tidak memerlukan proses *build*.
 
-## How to use
+## Panduan Penggunaan
 
-- **URL/text:** In the dashboard's simulator, choose text or URL, enter content, and run a scan. The extension can scan selected text or check a visited URL. Results include a risk level, score, indicators, and recommendations.
-- **Image:** Use the extension popup's image picker. The API validates the encoded payload, MIME type/signature, decoded size, dimensions, and pixel count before requesting Gemini Vision.
-- **Interpretation:** `COMPLETED` indicates analysis returned a result. `UNKNOWN` with a null score means analysis was not completed; it must not be interpreted as safe. Confirm transfers in the bank's official app.
-- **Analytics/history:** The dashboard shows persisted scan totals, risk/category distribution, recent history, and a seven-day trend. Empty state values are real zeros, not demo data.
-- **Education:** Read the mitigation advice and recommendations shown with the scan and dashboard. These are brief guidance, not personalized professional advice.
+- **Pindai URL / Teks:** Pada simulator dasbor atau popup ekstensi, masukkan tautan atau isi pesan teks, lalu jalankan pemindaian. Hasil pemindaian menyajikan tingkat risiko (*risk level*), skor risiko numerik, rincian indikator ancaman, dan rekomendasi mitigasi.
+- **Pindai Gambar Penipuan:** Gunakan fitur unggah gambar pada popup ekstensi TRASCO. Sistem memvalidasi integritas biner payload, tanda tangan MIME, ukuran biner, dimensi, dan jumlah piksel sebelum meminta analisis multimodal AI Gemini Vision.
+- **Interpretasi Hasil:** Status `COMPLETED` menandakan analisis berhasil diselesaikan. Status `UNKNOWN` dengan skor `null` menandakan analisis gagal diselesaikan oleh AI/jaringan; sesuai aturan *Zero False-Safe*, status ini **tidak boleh diartikan aman**. Selalu konfirmasikan keabsahan bukti transfer melalui aplikasi perbankan resmi Anda.
+- **Analitik & Riwayat:** Halaman dasbor menampilkan metrik agregat pemindaian, distribusi kategori ancaman, riwayat pemindaian terakhir, dan tren aktivitas mingguan. Nilai awal yang kosong adalah angka nol asli dari database, bukan data *dummy*.
+- **Edukasi Keamanan:** Baca rekomendasi mitigasi personal yang ditampilkan di bagian bawah dasbor untuk meningkatkan kewaspadaan digital jangka panjang.
 
-## API reference — primary Flask runner
+## Referensi API — Runner Utama Flask
 
-Requests from browser pages must use an allowed local origin and the `X-Trasco-Source` client identifier (`Dashboard-Client` or `Extension-Local`). Command-line requests without an `Origin` header do not need that browser handshake.
+Permintaan dari halaman peramban harus berasal dari *origin* lokal yang diizinkan serta menyertakan *header handshake* `X-Trasco-Source` (`Dashboard-Client` atau `Extension-Local`). Permintaan dari antarmuka baris perintah (*CLI/curl*) tanpa header `Origin` tidak memerlukan jabat tangan peramban tersebut.
 
-| Method and route | Purpose and request | Response/important errors |
+| Metode & Rute | Tujuan & Format Permintaan | Respon & Kode Status Penting |
 |---|---|---|
-| `GET /health` | Liveness probe; no body required. | `200` with service status. |
-| `GET /health/ready` | Readiness probe; no body required. | `200` when the schema is compatible; `503` while unready. |
-| `POST /api/v1/detect/analyze` | JSON: `{"scanType":"TEXT","content":"..."}` or `{"scanType":"URL","content":"..."}`; optional object `metadata`. | Analysis result with `success`, `status`, `scanId`, `riskLevel`, nullable `riskScore`, `threatCategory`, indicators, recommendations, and avatar guidance. Invalid JSON/content/type returns `400`. |
-| `POST /api/v1/detect/analyze-image` | JSON with `content` (Base64 data URL), optional `mimeType` (`image/jpeg`, `image/png`, or `image/webp`; inferred from the data URL when omitted), optional `fileName` and object `metadata`. | Result uses `COMPLETED` or an incomplete status such as `INVALID_REQUEST`, `INVALID_IMAGE`, `ANALYSIS_UNAVAILABLE`, or `ANALYSIS_FAILED`. Failures have `riskLevel: "UNKNOWN"` and `riskScore: null`; payloads may return `400`, `413`, `415`, `422`, `500`, `502`, `503`, or `504`. |
-| `GET /api/v1/analytics/overview` | Returns aggregate risk/category counts, recent history, and seven-day trends. | Stored records are aggregated without the recent-history limit. |
-| `GET /api/v1/analytics/history` | No body required. | Up to 30 most recent persisted records. Incomplete risk scores are `null`. |
+| `GET /health` | Pemeriksaan status liveness layanan; tanpa body. | `200` dengan status operasional layanan. |
+| `GET /health/ready` | Pemeriksaan kesiapan (readiness) ORM basis data; tanpa body. | `200` jika skema kompatibel; `503` jika belum siap. |
+| `POST /api/v1/detect/analyze` | JSON: `{"scanType":"TEXT","content":"..."}` atau `{"scanType":"URL","content":"..."}`; metadata opsional. | Hasil analisis mencakup `success`, `status`, `scanId`, `riskLevel`, `riskScore`, `threatCategory`, indikator ancaman, rekomendasi, dan panduan avatar. Format tidak valid menghasilkan `400`. |
+| `POST /api/v1/detect/analyze-image` | JSON dengan `content` (Data URL Base64), `mimeType` opsional (`image/jpeg`, `image/png`, atau `image/webp`), nama berkas opsional. | Menghasilkan status `COMPLETED` atau status kegagalan terisolasi seperti `INVALID_REQUEST`, `INVALID_IMAGE`, `ANALYSIS_UNAVAILABLE`, atau `ANALYSIS_FAILED`. Kegagalan menghasilkan `riskLevel: "UNKNOWN"` dan `riskScore: null`; kode HTTP `400`, `413`, `415`, `422`, `500`, `502`, `503`, atau `504`. |
+| `GET /api/v1/analytics/overview` | Mengambil agregasi metrik risiko, distribusi ancaman, tren mingguan, dan riwayat. | Catatan pemindaian diagregasikan langsung dari seluruh data riwayat basis data. |
+| `GET /api/v1/analytics/history` | Mengambil daftar riwayat pemindaian; tanpa body. | Mengembalikan hingga 30 catatan pemindaian terbaru. Skor yang gagal berstatus `null`. |
 
-The image upload limit is 5 MiB decoded, with a 7 MiB Base64 string limit and a 10 MiB HTTP request-body limit. The dashboard simulator currently supports only URL and text scans.
+Batas unggahan citra yang diizinkan adalah maksimal 5 MiB setelah didekode, dengan batas string Base64 sebesar 7 MiB dan batas HTTP request body sebesar 10 MiB.
 
-### Environment variables
+### Variabel Lingkungan (Environment Variables)
 
-The primary Flask runner reads `SECRET_KEY`, `DEBUG`, `DATABASE_URL`,
-`GEMINI_API_KEY`, `GEMINI_MODEL`, and `GEMINI_IMAGE_TIMEOUT_SECONDS` (default
-15 seconds). `SECRET_KEY` is required and must be at least 32 characters;
-production mode rejects the bundled insecure default.
-`DEBUG=true` is for local development only. `DATABASE_URL` in the sample points
-to `trasco_local.db`. Gemini settings enable upstream analysis but do not
-guarantee that the configured model is available.
+Runner utama Flask membaca konfigurasi `SECRET_KEY`, `DEBUG`, `DATABASE_URL`, `GEMINI_API_KEY`, `GEMINI_MODEL`, dan `GEMINI_IMAGE_TIMEOUT_SECONDS` (default 25 detik). Nilai `SECRET_KEY` wajib diisi dengan panjang minimal 32 karakter; mode produksi menolak nilai default yang tidak aman.
+`DEBUG=true` hanya ditujukan untuk lingkungan pengembangan lokal. Variabel `DATABASE_URL` pada berkas contoh mengarah ke `trasco_local.db`.
 
-The sample also includes `PROJECT_NAME`, `API_V1_STR`,
-`ACCESS_TOKEN_EXPIRE_MINUTES`, and `ALGORITHM` for the alternative FastAPI
-application and authentication code. `CORS_ORIGINS` is present in the sample
-but is not used by the primary Flask runner, whose browser allowlist is
-hard-coded to local development origins and extension origins. Do not rely on
-that variable to change or secure CORS behavior.
+Berkas contoh juga menyertakan `PROJECT_NAME`, `API_V1_STR`, `ACCESS_TOKEN_EXPIRE_MINUTES`, dan `ALGORITHM` untuk kebutuhan runner alternatif FastAPI. Variabel `CORS_ORIGINS` tersedia pada contoh konfigurasi, namun runner utama Flask menggunakan daftar origin lokal dan ekstensi yang terdefinisi secara ketat demi keamanan.
 
-### Alternative FastAPI runner
+### Alternatif Runner FastAPI
 
-`apps/backend/app/main.py` provides the `/api/v1` detection, analytics,
-authentication, and preferences routers, plus `/health`, `/health/ready`,
-`/docs`, and `/redoc`. Its startup fails if security configuration or schema
-checks fail. Unlike Flask, its current runner binds to all interfaces and
-configures wildcard CORS, so do not expose it to an untrusted network. It is
-not part of the verified primary workflow; use Flask for local development.
+Berkas `apps/backend/app/main.py` menyediakan router deteksi, analitik, otentikasi, dan preferensi untuk `/api/v1`, serta endpoint `/health`, `/health/ready`, `/docs`, dan `/redoc`. Proses startup akan berhenti jika validasi konfigurasi keamanan atau skema gagal. Berbeda dengan Flask, runner FastAPI saat ini mengikat seluruh antarmuka jaringan; gunakan Flask sebagai runner utama untuk alur pengembangan lokal yang telah diverifikasi.
 
-## Testing and verification
+## Pengujian dan Verifikasi (Testing)
 
-Run from the repository root with dependencies installed. Tests use an
-in-memory SQLite fixture. Run them from a new temporary working directory so
-Pydantic settings cannot load `apps/backend/.env`; this avoids both the local
-database and any locally configured Gemini key.
+Jalankan perintah pengujian dari direktori utama repositori dengan dependensi yang telah terpasang. Pengujian menggunakan basis data SQLite *in-memory* yang terisolasi. Jalankan dari direktori kerja sementara baru agar modul Pydantic tidak memuat berkas `apps/backend/.env`, sehingga terbebas dari basis data lokal maupun kunci Gemini lokal.
 
 ```powershell
 $backend = (Resolve-Path apps\backend).Path
@@ -301,7 +266,7 @@ Remove-Item -LiteralPath $testCwd
 if ($testExitCode -ne 0) { exit $testExitCode }
 ```
 
-On macOS/Linux:
+Pada macOS/Linux:
 
 ```bash
 backend="$PWD/apps/backend"
@@ -319,16 +284,16 @@ rmdir "$test_cwd"
 exit "$test_status"
 ```
 
-The test fixtures use in-memory SQLite databases; tests that need persistent scratch data use temporary directories. Do not set test configuration to the user's `trasco.db`.
+Seluruh pengujian otomatis menggunakan basis data SQLite in-memory; pengujian yang membutuhkan berkas sementara menggunakan direktori temporer terisolasi. Jangan pernah mengarahkan pengujian ke berkas data `trasco.db`.
 
-From `apps/dashboard`:
+Uji build dasbor dari direktori `apps/dashboard`:
 
 ```bash
 npm ci
 npm run build
 ```
 
-From the repository root, check extension JavaScript syntax:
+Dari direktori utama repositori, periksa sintaks JavaScript ekstensi:
 
 ```bash
 node --check apps/extension/src/background/service-worker.js
@@ -336,41 +301,40 @@ node --check apps/extension/src/content/content-script.js
 node --check apps/extension/src/popup/popup.js
 ```
 
-## Troubleshooting
+## Pemecahan Masalah (Troubleshooting)
 
-- **Backend refuses to start:** Confirm that `.env` exists under `apps/backend`, `SECRET_KEY` is non-empty and at least 32 characters, and `DEBUG=true` is used only for local development.
-- **Readiness is `503`:** The database has not been initialized or its schema does not match the ORM models. Check `DATABASE_URL` and initialize the designated local database with the command above. The backend does not migrate an existing schema.
-- **Port 8000 is in use:** Stop the conflicting local service before starting TRASCO. The Flask development runner binds to `127.0.0.1:8000`; changing the port requires updating the backend, dashboard, extension host permissions, and extension backend URL consistently.
-- **Dashboard cannot connect:** Keep the Flask server running on port 8000 and use the Vite origin `http://127.0.0.1:5173` or `http://localhost:5173`. If port 5173 is occupied, Vite may select another port that the backend does not allow; stop the conflicting service or deliberately update the backend allowlist and dashboard origin together. Use the Vite URL, not `file://`.
-- **Gemini unavailable or rate-limited:** Check the key and configured model locally without sharing them. Text/URL scans continue with heuristics. Image scans report an unavailable/failed result; verify payment manually and do not treat it as safe.
-- **Image is rejected:** Use JPEG, PNG, or WebP within the documented size/dimension limits. A file extension alone does not determine the validated image type.
-- **Dependency or build errors:** Use Python 3.11 and Node.js 20 as in CI, then reinstall from `requirements.txt` or `package-lock.json`.
+- **Backend menolak berjalan:** Pastikan berkas `.env` ada di dalam direktori `apps/backend`, `SECRET_KEY` tidak kosong dan memiliki panjang minimal 32 karakter, serta `DEBUG=true` hanya digunakan pada pengembangan lokal.
+- **Status Kesiapan (Readiness) menghasilkan `503`:** Basis data belum diinisialisasi atau skemanya tidak sesuai dengan model ORM. Periksa `DATABASE_URL` dan inisialisasi basis data lokal dengan perintah yang dijelaskan di atas. Backend tidak melakukan migrasi skema yang sudah ada.
+- **Port 8000 sedang digunakan:** Hentikan proses lokal lain yang menggunakan port tersebut sebelum menjalankan TRASCO. Runner pengembangan Flask mengikat ke `127.0.0.1:8000`.
+- **Dasbor tidak dapat terhubung ke Backend:** Pastikan server Flask berjalan di port 8000 dan akses dasbor melalui origin Vite di `http://127.0.0.1:5173` atau `http://localhost:5173`. Gunakan URL Vite, bukan membukanya langsung via `file://`.
+- **Gemini tidak merespons atau terkena batas kuota:** Periksa kunci API dan ketersediaan model lokal tanpa membagikannya ke publik. Pemindaian teks/URL akan tetap berjalan secara mandiri menggunakan heuristik lokal. Pemindaian gambar akan menampilkan status penanganan kegagalan (*fallback*); lakukan verifikasi keabsahan transaksi secara manual.
+- **Gambar ditolak oleh sistem:** Pastikan citra berformat JPEG, PNG, atau WebP serta memenuhi batasan dimensi/ukuran piksel yang diizinkan. Ekstensi nama berkas saja tidak menentukan tipe citra yang divalidasi.
+- **Kendala dependensi atau build:** Gunakan Python 3.11 dan Node.js 20 sesuai standar CI, lalu pasang ulang dependensi via `requirements.txt` atau `package-lock.json`.
 
-## Security and privacy
+## Keamanan dan Privasi
 
-- Keep `.env`, API keys, and local databases out of Git. `.gitignore` excludes environment files, common local databases, caches, and `.phase7_backups/`.
-- The Flask server binds to loopback by default. The dashboard dev server also binds to loopback. Do not expose these development services to an untrusted network.
-- Scan text is sent to Google Gemini when a key is configured and active Gemini analysis is selected. Review Google's terms and privacy practices before sending sensitive content. Image contents are also sent for Vision analysis when configured.
-- The backend stores a scrubbed text snippet or a fixed image label, a content hash, risk data, and scan metadata. This is not a guarantee of regulatory compliance or zero data retention.
-- The extension does not store a Gemini key. The closed Shadow DOM isolates the avatar UI from page styles; this does not make the extension or backend a security boundary.
-- Heuristics can produce false positives and false negatives. A completed result is not proof that a website or payment is safe.
+- Jaga kerahasiaan berkas `.env`, kunci API, dan basis data lokal agar tidak masuk ke pelacakan Git. Berkas `.gitignore` telah mengecualikan berkas *environment*, basis data lokal, *cache*, dan cadangan sementara.
+- Server Flask dan Vite secara bawaan hanya mengikat ke antarmuka *loopback* lokal (127.0.0.1). Jangan mengekspos layanan pengembangan ini secara terbuka ke jaringan publik tanpa lapisan proksi keamanan.
+- Teks pemindaian hanya dikirim ke Google Gemini jika kunci API dikonfigurasi dan analisis aktif dipilih. Konten citra dikirim untuk analisis Vision hanya saat pemindaian gambar dipicu.
+- Backend menyimpan ringkasan teks yang telah disanitasi (*scrubbed* PII) atau label citra tetap, *hash* konten, data skor risiko, dan metadata pemindaian untuk kalkulasi analitik dasbor.
+- Ekstensi peramban tidak menyimpan kunci API Gemini. Isolasi antarmuka avatar menggunakan *closed* Shadow DOM untuk mencegah kontaminasi gaya CSS dari halaman web yang dikunjungi.
+- Sistem heuristik dapat menghasilkan hasil positif palsu (*false positive*) maupun negatif palsu (*false negative*). Hasil pemindaian bukan merupakan jaminan mutlak bahwa suatu situs atau bukti transfer sepenuhnya aman.
 
-## Current limitations
+## Batasan Saat Ini
 
-- The configured Gemini model name and SDK call path have not been confirmed as working. An early smoke attempt returned an upstream timeout; a later isolated test with Gemini explicitly disabled confirmed the expected unavailable response. No successful Gemini analysis has been verified.
-- The alternative FastAPI runner and authentication/preferences flow are not part of the verified primary workflow. The standalone dashboard's inline JavaScript syntax has been checked, but it has not been runtime-verified.
-- Right-click context-menu image scanning passes an image URL, while the backend currently expects an uploaded Base64 data URL. Use popup image upload instead.
-- The education content is limited to inline advice and examples. The dashboard has no separate lesson-management system.
-- No root `LICENSE` file was present when this README was prepared. Package metadata declares MIT for individual packages; that is not a substitute for a verified repository-level license.
+- Runner alternatif FastAPI dan alur otentikasi pengguna merupakan modul pendukung dan bukan bagian dari alur pengujian utama kompetisi. Dasbor HTML mandiri disediakan sebagai cadangan cepat, namun disarankan menggunakan dasbor utama berbasis Vite React.
+- Pemindaian gambar melalui menu klik kanan (*context menu*) peramban mengirimkan URL gambar langsung, sedangkan endpoint backend saat ini memproses unggahan data Base64. Disarankan menggunakan fitur pemilih gambar pada popup ekstensi.
+- Materi edukasi disajikan dalam bentuk rekomendasi mitigasi interaktif dan studi kasus pada simulator, tanpa modul kurikulum pembelajaran terpisah.
 
-## Development
+## Alur Pengembangan (Development)
 
-- Backend: use the isolated temporary-working-directory test command above.
-- Dashboard: `cd apps/dashboard; npm run build`
-- Extension syntax: run the three `node --check` commands above.
-- Keep shared TypeScript contracts in `packages/shared-types/src/`; dashboard imports them through the Vite alias.
-- CI workflow: `.github/workflows/ci.yml`.
+- Backend: Gunakan perintah pengujian direktori kerja sementara yang terisolasi di atas.
+- Dasbor Frontend: `cd apps/dashboard; npm run build`
+- Sintaks Ekstensi: Jalankan tiga perintah verifikasi `node --check` di atas.
+- Sinkronisasi Tipe Data: Kelola kontrak kanonikal TypeScript pada `packages/shared-types/src/`; dasbor mengimpornya melalui alias Vite.
+- Alur Otomatisasi CI: Dikelola oleh `.github/workflows/ci.yml`.
 
-## Acknowledgements
+## Penghargaan & Pengakuan (Acknowledgements)
 
-TRASCO was developed for the MIT UNMUL 2026 Hackathon, Web Development — Cybersecurity Track. No additional acknowledgements or repository-level license were verified.
+TRASCO dikembangkan secara khusus untuk **MIT UNMUL 2026 Hackathon, Web Development — Cybersecurity Track**. Hak cipta dan lisensi perangkat lunak dilindungi sesuai ketentuan proyek monorepo TRASCO.
+
