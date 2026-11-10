@@ -175,6 +175,32 @@ def test_analytics_aggregates_all_records_beyond_recent_history():
         engine.dispose()
 
 
+def test_history_endpoint_hides_failed_scan_sentinel_score():
+    """Public history must serialize the internal failed-scan sentinel as null."""
+    from app.flask_app import SessionLocal, app as flask_app
+
+    scan_id = str(uuid.uuid4())
+    db = SessionLocal()
+    try:
+        db.add(DetectionLog(
+            id=scan_id,
+            scan_type="IMAGE",
+            sanitized_snippet="[Image Scan: unavailable]",
+            risk_level="UNKNOWN",
+            risk_score=-1,
+            threat_category="UNKNOWN",
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    response = flask_app.test_client().get("/api/v1/analytics/history")
+    assert response.status_code == 200
+    item = next(row for row in response.get_json() if row["id"] == scan_id)
+    assert item["riskLevel"] == "UNKNOWN"
+    assert item["riskScore"] is None
+
+
 def test_weekly_trend_date_bucketing():
     """Weekly trends accurately bucket scans across actual calendar days."""
     engine, Session = _create_isolated_db()

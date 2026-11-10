@@ -416,7 +416,9 @@ def get_history():
                 "scanType": l.scan_type,
                 "sanitizedSnippet": l.sanitized_snippet,
                 "riskLevel": l.risk_level,
-                "riskScore": l.risk_score,
+                "riskScore": (
+                    l.risk_score if l.risk_score is not None and l.risk_score >= 0 else None
+                ),
                 "threatCategory": l.threat_category,
                 "indicators": l.detection_indicators,
                 "recommendations": l.recommendations,
