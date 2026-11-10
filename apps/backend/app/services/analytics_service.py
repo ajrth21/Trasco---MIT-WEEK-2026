@@ -29,11 +29,11 @@ def compute_security_overview(db: Session, user_id: str = None) -> SecurityOverv
         )
     ).with_entities(func.count(DetectionLog.id)).scalar() or 0
 
-    # Honest hygiene score: 100 for clean slate, penalized by real detected threats
+    # Honest hygiene score: 100 for clean slate, penalized by real detected threats (range: 0 to 100)
     if total_scans == 0:
         hygiene_score = 100
     else:
-        hygiene_score = max(50, min(100, int(100 - (high_count * 10) - (med_count * 5))))
+        hygiene_score = max(0, min(100, int(100 - (high_count * 10) - (med_count * 5))))
 
     # Real Category counts from persisted records
     category_counts = dict(

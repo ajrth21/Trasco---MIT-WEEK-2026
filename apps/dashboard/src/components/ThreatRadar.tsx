@@ -30,7 +30,7 @@ export const ThreatRadar: React.FC<ThreatRadarProps> = ({ distribution }) => {
                   className={`h-full rounded-full transition-all duration-700 ${
                     item.category === 'SAFE'
                       ? 'bg-emerald-500'
-                      : item.category.includes('JOB') || item.category.includes('OTP')
+                      : item.category.includes('JOB') || item.category.includes('OTP') || item.category.includes('JUDI') || item.category.includes('APK')
                       ? 'bg-rose-500'
                       : 'bg-amber-500'
                   }`}

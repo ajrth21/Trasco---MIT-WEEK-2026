@@ -88,7 +88,7 @@ def analyze_image_with_gemini(image_bytes: bytes, mime_type: str = "image/jpeg")
         }
 
         import socket
-        timeout_sec = getattr(settings, "GEMINI_IMAGE_TIMEOUT_SECONDS", 15.0)
+        timeout_sec = getattr(settings, "GEMINI_IMAGE_TIMEOUT_SECONDS", 25.0)
         old_timeout = socket.getdefaulttimeout()
         try:
             socket.setdefaulttimeout(timeout_sec)
