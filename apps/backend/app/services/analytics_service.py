@@ -1,6 +1,6 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, func, or_
 from app.models.detection import DetectionLog
 from app.schemas.analytics import (
     SecurityOverviewResponse, RiskBreakdown, ThreatDistribution, 
@@ -12,89 +12,108 @@ def compute_security_overview(db: Session, user_id: str = None) -> SecurityOverv
     query = db.query(DetectionLog)
     if user_id:
         query = query.filter(DetectionLog.user_id == user_id)
-        
-    logs = query.order_by(desc(DetectionLog.created_at)).limit(50).all()
 
-    total_scans = len(logs)
-    low_count = sum(1 for l in logs if l.risk_level == "LOW")
-    med_count = sum(1 for l in logs if l.risk_level == "MEDIUM")
-    high_count = sum(1 for l in logs if l.risk_level == "HIGH")
+    total_scans = query.with_entities(func.count(DetectionLog.id)).scalar() or 0
+    risk_counts = dict(
+        query.with_entities(DetectionLog.risk_level, func.count(DetectionLog.id))
+        .group_by(DetectionLog.risk_level)
+        .all()
+    )
+    low_count = risk_counts.get("LOW", 0)
+    med_count = risk_counts.get("MEDIUM", 0)
+    high_count = risk_counts.get("HIGH", 0)
+    unknown_count = query.filter(
+        or_(
+            DetectionLog.risk_level.notin_(("LOW", "MEDIUM", "HIGH")),
+            DetectionLog.risk_score < 0,
+        )
+    ).with_entities(func.count(DetectionLog.id)).scalar() or 0
 
-    # If new user / no scans yet, provide informative baseline sample for demo display
+    # Honest hygiene score: 100 for clean slate, penalized by real detected threats
     if total_scans == 0:
-        total_scans = 18
-        low_count = 12
-        med_count = 4
-        high_count = 2
+        hygiene_score = 100
+    else:
+        hygiene_score = max(50, min(100, int(100 - (high_count * 10) - (med_count * 5))))
 
-    # Hygiene score: higher is safer (penalized by high risk and medium risk items handled)
-    hygiene_score = max(50, min(98, int(100 - (high_count * 5) - (med_count * 2))))
-
-    # Category counts
-    category_counts = {}
-    for l in logs:
-        cat = l.threat_category
-        category_counts[cat] = category_counts.get(cat, 0) + 1
-
-    if not category_counts:
-        category_counts = {
-            "SAFE": 12,
-            "FAKE_JOB_OFFER": 3,
-            "OTP_THEFT": 2,
-            "TYPOSQUATTING": 1
-        }
+    # Real Category counts from persisted records
+    category_counts = dict(
+        query.with_entities(DetectionLog.threat_category, func.count(DetectionLog.id))
+        .group_by(DetectionLog.threat_category)
+        .all()
+    )
 
     threat_dist = [
         ThreatDistribution(
-            category=cat.replace("_", " "),
+            category=(cat or "UNVERIFIED").replace("_", " "),
             count=cnt,
-            percentage=round((cnt / total_scans) * 100, 1)
+            percentage=round((cnt / total_scans) * 100, 1) if total_scans > 0 else 0.0
         )
         for cat, cnt in category_counts.items()
     ]
 
-    # Weekly trend
+    # Real Weekly trend based on actual timestamps of last 7 days
     today = datetime.now(timezone.utc).date()
-    trends = []
-    for i in range(6, -1, -1):
-        day = today - timedelta(days=i)
-        day_str = day.strftime("%a")
-        day_scans = max(1, (total_scans // 7) + (i % 3))
-        threats = 1 if i in [1, 4] else 0
-        trends.append(DailyScanTrend(date=day_str, scans=day_scans, threatsPrevented=threats))
+    daily_buckets = {today - timedelta(days=i): {"scans": 0, "threats": 0} for i in range(6, -1, -1)}
+    week_start = datetime.combine(today - timedelta(days=6), time.min, tzinfo=timezone.utc)
+    trend_logs = query.filter(DetectionLog.created_at >= week_start).all()
 
-    # Recent history
+    for l in trend_logs:
+        if l.created_at:
+            log_date = l.created_at.date() if hasattr(l.created_at, "date") else None
+            if log_date and log_date in daily_buckets:
+                daily_buckets[log_date]["scans"] += 1
+                if l.risk_level in ("HIGH", "MEDIUM"):
+                    daily_buckets[log_date]["threats"] += 1
+
+    trends = [
+        DailyScanTrend(
+            date=day.strftime("%a"),
+            scans=metrics["scans"],
+            threatsPrevented=metrics["threats"]
+        )
+        for day, metrics in daily_buckets.items()
+    ]
+
+    # Real Recent history from persisted logs
+    logs = query.order_by(desc(DetectionLog.created_at)).limit(10).all()
     recent_items = [
         ScanHistoryItem(
             id=l.id,
             scanType=l.scan_type,
             sanitizedSnippet=l.sanitized_snippet,
             riskLevel=l.risk_level,
-            riskScore=l.risk_score,
-            threatCategory=l.threat_category.replace("_", " "),
-            createdAt=l.created_at.strftime("%Y-%m-%d %H:%M")
+            riskScore=l.risk_score if (l.risk_score is not None and l.risk_score >= 0) else None,
+            threatCategory=(l.threat_category or "PERIKSA MANUAL").replace("_", " "),
+            createdAt=l.created_at.strftime("%Y-%m-%d %H:%M") if l.created_at else ""
         )
         for l in logs[:10]
     ]
 
-    key_advice = [
+    # Adaptive mitigation recommendations
+    key_advice = []
+    if high_count > 0:
+        key_advice.append("Terdeteksi ancaman kritis: Segera amankan akun, ubah kata sandi, dan hubungi institusi perbankan resmi Anda.")
+    if med_count > 0:
+        key_advice.append("Waspadai rekayasa sosial: Jangan pernah mentransfer uang jaminan untuk lowongan kerja atau undian.")
+
+    # Always include baseline fundamental advisories
+    key_advice.extend([
         "JANGAN membagikan kode OTP atau PIN m-banking kepada siapa pun, termasuk pihak yang mengaku customer service.",
-        "Waspadai lowongan kerja freelance dengan iming-iming upah harian yang meminta transfer deposit uang jaminan.",
-        "Verifikasi nama domain bank sebelum login; bank resmi Indonesia menggunakan domain berakhiran .co.id atau .id."
-    ]
+        "Verifikasi keaslian bukti transfer melalui mutasi rekening m-banking resmi sebelum mengirimkan barang atau jasa.",
+        "Selalu periksa nama domain bank resmi (.co.id atau .id) sebelum memasukkan informasi login atau transaksi."
+    ])
 
     return SecurityOverviewResponse(
         securityHygieneScore=hygiene_score,
         riskBreakdown=RiskBreakdown(
             lowRiskCount=low_count,
-            medRiskCount=med_count if 'medRiskCount' in RiskBreakdown.model_fields else med_count,
             mediumRiskCount=med_count,
             highRiskCount=high_count,
+            unknownRiskCount=unknown_count,
             totalScans=total_scans
         ),
         threatDistribution=threat_dist,
         weeklyTrends=trends,
         recentHistory=recent_items,
-        keyAdvice=key_advice
+        keyAdvice=key_advice[:3]
     )
-

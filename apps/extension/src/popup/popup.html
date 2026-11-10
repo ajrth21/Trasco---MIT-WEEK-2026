@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -160,7 +161,10 @@
     .slider {
       position: absolute;
       cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       background-color: #475569;
       transition: .3s;
       border-radius: 20px;
@@ -178,11 +182,11 @@
       border-radius: 50%;
     }
 
-    input:checked + .slider {
+    input:checked+.slider {
       background-color: #06b6d4;
     }
 
-    input:checked + .slider:before {
+    input:checked+.slider:before {
       transform: translateX(16px);
     }
 
@@ -231,6 +235,38 @@
 
     .btn-scan:hover {
       background: #0284c7;
+    }
+
+    /* Image Dropzone */
+    .dropzone {
+      border: 2px dashed #475569;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      background: #0f172a;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+    }
+
+    .dropzone:hover,
+    .dropzone.dragover {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.06);
+    }
+
+    .dropzone-text {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .dropzone-preview {
+      display: none;
+      max-width: 100%;
+      max-height: 110px;
+      margin: 0 auto 6px auto;
+      border-radius: 6px;
+      object-fit: contain;
     }
 
     /* Result Box */
@@ -282,11 +318,19 @@
     }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="header">
     <div class="brand">
@@ -323,7 +367,9 @@
     <div class="toggle-row">
       <span class="toggle-label">Peringatan Suara Avatar</span>
       <div style="display: flex; align-items: center; gap: 8px;">
-        <button id="btnTestVoice" style="background: none; border: 1px solid #06b6d4; color: #38bdf8; border-radius: 4px; padding: 1px 6px; font-size: 10px; cursor: pointer;">Tes Suara</button>
+        <button id="btnTestVoice"
+          style="background: none; border: 1px solid #06b6d4; color: #38bdf8; border-radius: 4px; padding: 1px 6px; font-size: 10px; cursor: pointer;">Tes
+          Suara</button>
         <label class="switch">
           <input type="checkbox" id="toggleAudio" checked>
           <span class="slider"></span>
@@ -334,12 +380,39 @@
 
   <div class="section-title">Pindai Teks / Link Cepat</div>
   <div class="scan-card">
-    <textarea id="scanInput" class="scan-input" placeholder="Tempel teks chat, SMS penipuan, atau URL yang mencurigakan..."></textarea>
+    <textarea id="scanInput" class="scan-input"
+      placeholder="Tempel teks chat, SMS penipuan, atau URL yang mencurigakan..."></textarea>
     <button id="btnScan" class="btn-scan">
       <span>⚡</span>
       <span>Pindai dengan AI Engine</span>
     </button>
     <div id="scanResult" class="result-box"></div>
+  </div>
+
+  <div class="section-title">Pindai Bukti Transfer (Image Scam)</div>
+  <div class="scan-card">
+    <input type="file" id="imageFileInput" accept="image/jpeg,image/png,image/webp" style="display: none;">
+    <div id="imageDropzone" class="dropzone">
+      <img id="imagePreview" class="dropzone-preview" alt="Preview bukti transfer">
+      <div id="dropzonePrompt">
+        <span style="font-size: 20px;">🖼️</span>
+        <p class="dropzone-text" style="font-weight: 500; color: #e2e8f0; margin-top: 4px;">Pilih atau Tarik Bukti
+          Transfer</p>
+        <p class="dropzone-text" style="font-size: 10px; color: #64748b;">Maksimal 5 MiB (JPEG, PNG, WebP)</p>
+      </div>
+    </div>
+    <div id="imageFileInfo"
+      style="display: none; font-size: 11px; color: #94a3b8; margin-bottom: 8px; justify-content: space-between; align-items: center;">
+      <span id="imageFileName"
+        style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;"></span>
+      <button id="btnRemoveImage"
+        style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 11px;">Hapus</button>
+    </div>
+    <button id="btnScanImage" class="btn-scan" style="background: #6366f1;" disabled>
+      <span>🔍</span>
+      <span>Pindai Bukti Transfer</span>
+    </button>
+    <div id="imageScanResult" class="result-box"></div>
   </div>
 
   <div style="display: flex; gap: 8px;">
@@ -355,4 +428,5 @@
 
   <script src="popup.js"></script>
 </body>
+
 </html>

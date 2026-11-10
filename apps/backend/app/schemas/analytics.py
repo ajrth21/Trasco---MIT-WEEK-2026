@@ -1,4 +1,4 @@
-from typing import List, Any
+from typing import List, Any, Optional
 from pydantic import BaseModel
 
 
@@ -7,6 +7,7 @@ class RiskBreakdown(BaseModel):
     mediumRiskCount: int
     highRiskCount: int
     totalScans: int
+    unknownRiskCount: int = 0
 
 
 class ThreatDistribution(BaseModel):
@@ -26,8 +27,8 @@ class ScanHistoryItem(BaseModel):
     scanType: str
     sanitizedSnippet: str
     riskLevel: str
-    riskScore: int
-    threatCategory: str
+    riskScore: Optional[int] = None
+    threatCategory: Optional[str] = None
     createdAt: str
 
     class Config:

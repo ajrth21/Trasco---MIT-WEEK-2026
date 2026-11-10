@@ -214,6 +214,21 @@ async function analyzeContent(scanType, content, metadata = {}) {
   return await res.json();
 }
 
+// Safe tab notification helper for MV3 Service Worker (uses lastFocusedWindow instead of currentWindow)
+async function broadcastToActiveTab(type, payload) {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    if (tabs && tabs.length > 0 && tabs[0].id) {
+      if (payload && payload.riskLevel) {
+        updateBadge(tabs[0].id, payload.riskLevel);
+      }
+      await chrome.tabs.sendMessage(tabs[0].id, { type, payload }).catch(() => {});
+    }
+  } catch (e) {
+    // Tab broadcast is best-effort; ignore errors in service worker background
+  }
+}
+
 // Runtime Message Dispatcher
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'TRIGGER_SCAN') {
@@ -226,5 +241,68 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       })
       .catch(err => sendResponse({ success: false, error: err.message }));
     return true; // Keep message channel open for async response
+  }
+
+  if (message.type === 'RUN_IMAGE_SCAN') {
+    const { content, mimeType, fileName } = message;
+    (async () => {
+      let responsePayload = null;
+      try {
+        const cfg = await chrome.storage.local.get(['backendUrl']);
+        const baseUrl = cfg.backendUrl || 'http://localhost:8000';
+        const res = await fetch(`${baseUrl}/api/v1/detect/analyze-image`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Trasco-Source': 'Extension-Local'
+          },
+          body: JSON.stringify({
+            scanType: 'IMAGE',
+            content: content,
+            mimeType: mimeType || 'image/jpeg',
+            fileName: fileName || null,
+            metadata: { fileName: fileName || null }
+          })
+        });
+
+        const data = await res.json();
+        responsePayload = { success: res.ok && data.success, data: data };
+        await broadcastToActiveTab('SCAN_RESULT', data);
+      } catch (err) {
+        console.error('[TRASCO] Image scan error:', err);
+        const failClosedFallback = {
+          success: false,
+          status: 'ANALYSIS_UNAVAILABLE',
+          scanId: null,
+          riskLevel: 'UNKNOWN',
+          riskScore: null,
+          threatCategory: null,
+          confidenceScore: 0.0,
+          detectionIndicators: [],
+          recommendedActions: ['Verifikasi bukti transfer melalui mutasi bank resmi Anda.'],
+          avatarGuidance: {
+            mood: 'CAUTION_ALERT',
+            speechText: 'Gagal terhubung ke Backend Engine. Verifikasi mutasi secara manual.',
+            accentColor: '#F59E0B',
+            recommendedActionPrimary: 'Periksa Mutasi Rekening',
+            recommendedActionSecondary: 'Pastikan Backend Berjalan'
+          },
+          error: {
+            code: 'VISION_SERVICE_UNAVAILABLE',
+            message: err.message || 'Network connection failed'
+          }
+        };
+
+        responsePayload = { success: false, data: failClosedFallback, error: err.message };
+        await broadcastToActiveTab('SCAN_RESULT', failClosedFallback);
+      } finally {
+        try {
+          sendResponse(responsePayload);
+        } catch (e) {
+          console.warn('[TRASCO] sendResponse port error:', e);
+        }
+      }
+    })();
+    return true; // Keep message port open for async response
   }
 });

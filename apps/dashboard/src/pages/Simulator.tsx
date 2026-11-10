@@ -65,8 +65,8 @@ export const Simulator: React.FC = () => {
         utterance.lang = 'id-ID';
         window.speechSynthesis.speak(utterance);
       }
-    } catch (err: any) {
-      setError(err.message || 'Gagal menghubungi backend TRASCO');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Gagal menghubungi backend TRASCO');
     } finally {
       setLoading(false);
     }
@@ -183,7 +183,7 @@ export const Simulator: React.FC = () => {
           className={`rounded-2xl border p-6 sm:p-8 shadow-2xl transition-all animate-fadeIn ${
             result.riskLevel === 'HIGH'
               ? 'bg-gradient-to-b from-rose-950/20 to-slate-900 border-rose-900/60'
-              : result.riskLevel === 'MEDIUM'
+              : result.riskLevel === 'MEDIUM' || result.status !== 'COMPLETED'
               ? 'bg-gradient-to-b from-amber-950/20 to-slate-900 border-amber-900/60'
               : 'bg-gradient-to-b from-emerald-950/20 to-slate-900 border-emerald-900/60'
           }`}
@@ -195,12 +195,12 @@ export const Simulator: React.FC = () => {
                 className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-lg ${
                   result.riskLevel === 'HIGH'
                     ? 'bg-rose-500/20 border-2 border-rose-500 text-rose-400 shadow-rose-500/20 animate-bounce'
-                    : result.riskLevel === 'MEDIUM'
+                    : result.riskLevel === 'MEDIUM' || result.status !== 'COMPLETED'
                     ? 'bg-amber-500/20 border-2 border-amber-500 text-amber-400 shadow-amber-500/20'
                     : 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 shadow-emerald-500/20'
                 }`}
               >
-                {result.riskLevel === 'HIGH' ? '🛡️' : result.riskLevel === 'MEDIUM' ? '⚠️' : '🤖'}
+                {result.riskLevel === 'HIGH' ? '🛡️' : result.riskLevel === 'MEDIUM' || result.status !== 'COMPLETED' ? '⚠️' : '🤖'}
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -208,15 +208,15 @@ export const Simulator: React.FC = () => {
                     className={`text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
                       result.riskLevel === 'HIGH'
                         ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                        : result.riskLevel === 'MEDIUM'
+                        : result.riskLevel === 'MEDIUM' || result.status !== 'COMPLETED'
                         ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                         : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                     }`}
                   >
-                    {result.riskLevel} RISK • SKOR: {result.riskScore}/100
+                    {result.riskLevel} RISK • SKOR: {result.riskScore === null ? 'Verifikasi Manual' : `${result.riskScore}/100`}
                   </span>
                   <span className="text-xs text-slate-400">
-                    Kategori: {result.threatCategory.replace(/_/g, ' ')}
+                    Kategori: {(result.threatCategory || 'PERIKSA MANUAL').replace(/_/g, ' ')}
                   </span>
                 </div>
                 <h3 className="text-lg font-bold text-white mt-1">
@@ -228,10 +228,17 @@ export const Simulator: React.FC = () => {
             <div className="text-right">
               <span className="text-[11px] text-slate-400 block">Waktu Analisis</span>
               <span className="text-xs font-mono text-cyan-300 font-semibold">
-                {result.latencyMs || 420} ms
+                {result.latencyMs === null || result.latencyMs === undefined ? '—' : `${result.latencyMs} ms`}
               </span>
             </div>
           </div>
+
+          {result.status !== 'COMPLETED' && (
+            <div className="mt-4 p-3 rounded-lg bg-amber-950/30 border border-amber-900/50 text-xs text-amber-200">
+              <strong>Analisis belum selesai.</strong> {result.summary}
+              {result.error?.message && <span> {result.error.message}</span>}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
             {/* Indicators */}
@@ -286,4 +293,3 @@ export const Simulator: React.FC = () => {
     </div>
   );
 };
-

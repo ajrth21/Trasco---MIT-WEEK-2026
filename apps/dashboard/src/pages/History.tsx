@@ -7,7 +7,7 @@ interface HistoryProps {
 }
 
 export const History: React.FC<HistoryProps> = ({ items, onRefresh }) => {
-  const [filter, setFilter] = useState<'ALL' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
+  const [filter, setFilter] = useState<'ALL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN'>('ALL');
   const [selectedItem, setSelectedItem] = useState<ScanHistoryItem | null>(null);
 
   const filteredItems = items.filter((item) => {
@@ -29,7 +29,7 @@ export const History: React.FC<HistoryProps> = ({ items, onRefresh }) => {
 
         <div className="flex items-center gap-2">
           <div className="flex bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs">
-            {(['ALL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((lvl) => (
+            {(['ALL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'] as const).map((lvl) => (
               <button
                 key={lvl}
                 onClick={() => setFilter(lvl)}
@@ -41,6 +41,8 @@ export const History: React.FC<HistoryProps> = ({ items, onRefresh }) => {
                       ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                       : lvl === 'LOW'
                       ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      : lvl === 'UNKNOWN'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                       : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
@@ -92,14 +94,14 @@ export const History: React.FC<HistoryProps> = ({ items, onRefresh }) => {
                       {item.sanitizedSnippet}
                     </td>
                     <td className="py-3.5 px-4 font-medium text-slate-200">
-                      {item.threatCategory}
+                      {item.threatCategory || 'PERIKSA MANUAL'}
                     </td>
                     <td className="py-3.5 px-4">
                       <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-[10px] ${
                           item.riskLevel === 'HIGH'
                             ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
-                            : item.riskLevel === 'MEDIUM'
+                            : item.riskLevel === 'MEDIUM' || item.riskLevel === 'UNKNOWN' || item.riskScore === null
                             ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
                             : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                         }`}
@@ -108,12 +110,12 @@ export const History: React.FC<HistoryProps> = ({ items, onRefresh }) => {
                           className={`w-1.5 h-1.5 rounded-full ${
                             item.riskLevel === 'HIGH'
                               ? 'bg-rose-400'
-                              : item.riskLevel === 'MEDIUM'
+                              : item.riskLevel === 'MEDIUM' || item.riskLevel === 'UNKNOWN' || item.riskScore === null
                               ? 'bg-amber-400'
                               : 'bg-emerald-400'
                           }`}
                         ></span>
-                        {item.riskLevel} ({item.riskScore})
+                        {item.riskLevel} ({item.riskScore === null ? 'Verifikasi Manual' : item.riskScore})
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-slate-400 text-[11px]">
@@ -165,14 +167,14 @@ export const History: React.FC<HistoryProps> = ({ items, onRefresh }) => {
                   <span className="text-slate-500 font-semibold uppercase tracking-wider block mb-1">
                     Klasifikasi
                   </span>
-                  <div className="font-semibold text-slate-200">{selectedItem.threatCategory}</div>
+                  <div className="font-semibold text-slate-200">                  {selectedItem.threatCategory || 'PERIKSA MANUAL'}</div>
                 </div>
                 <div>
                   <span className="text-slate-500 font-semibold uppercase tracking-wider block mb-1">
                     Tingkat Risiko
                   </span>
                   <div className="font-bold text-rose-400">
-                    {selectedItem.riskLevel} ({selectedItem.riskScore}/100)
+                    {selectedItem.riskLevel} ({selectedItem.riskScore === null ? 'Verifikasi Manual' : `${selectedItem.riskScore}/100`})
                   </div>
                 </div>
               </div>
@@ -198,4 +200,3 @@ export const History: React.FC<HistoryProps> = ({ items, onRefresh }) => {
     </div>
   );
 };
-

@@ -11,17 +11,20 @@ export const App: React.FC = () => {
   const [overviewData, setOverviewData] = useState<SecurityOverviewData | null>(null);
   const [historyItems, setHistoryItems] = useState<ScanHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
+    setErrorMsg(null);
     try {
       const overview = await fetchSecurityOverview();
       setOverviewData(overview);
       if (overview.recentHistory) {
         setHistoryItems(overview.recentHistory);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load dashboard data', err);
+      setErrorMsg(err.message || 'Gagal terhubung ke backend engine port 8000.');
     } finally {
       setLoading(false);
     }
@@ -36,6 +39,17 @@ export const App: React.FC = () => {
       <Navbar currentTab={currentTab} onSelectTab={setCurrentTab} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {errorMsg && (
+          <div className="mb-6 p-4 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🚨</span>
+              <span><strong>Backend Offline / Error:</strong> {errorMsg}. Pastikan TRASCO backend aktif pada port 8000.</span>
+            </div>
+            <button onClick={loadData} className="px-3 py-1 bg-rose-900/60 hover:bg-rose-800 text-white rounded-lg font-semibold transition-all">
+              Coba Lagi
+            </button>
+          </div>
+        )}
         {currentTab === 'overview' && (
           <Overview
             data={overviewData}

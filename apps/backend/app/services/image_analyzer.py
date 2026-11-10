@@ -1,8 +1,8 @@
-import base64
 import json
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 from app.core.config import settings
+from app.schemas.detection import ErrorDetail
 
 logger = logging.getLogger(__name__)
 
@@ -47,54 +47,30 @@ Berikan output strictly dalam format JSON:
 """
 
 
-def analyze_image_fallback(image_input: str) -> Dict[str, Any]:
-    """Deterministic local fallback for image scam and payment slip analysis."""
-    return {
-        "isScam": True,
-        "confidenceScore": 82,
-        "threatCategory": "FAKE_TRANSFER_SLIP",
-        "summary": "Analisis visual mengidentifikasi potensi bukti transfer fiktif/diedit. Verifikasi transaksi Anda melalui mutasi rekening resmi.",
-        "aiIndicators": [
-            {
-                "indicator": "Pemeriksaan Keaslian Bukti Transfer",
-                "severity": "HIGH",
-                "explanation": "Struk transaksi digital rentan dimanipulasi dengan aplikasi editor grafis instan."
-            },
-            {
-                "indicator": "Mitigasi Finansial Tanpa Mutasi",
-                "severity": "CRITICAL",
-                "explanation": "Jangan pernah melepaskan barang atau dana sebelum mutasi saldo bertambah di aplikasi perbankan resmi."
-            }
-        ],
-        "recommendedActions": [
-            "Buka aplikasi m-banking resmi Anda dan periksa mutasi rekening koran.",
-            "Jangan percaya tangkapan layar (screenshot) transfer dari pihak lain sebelum dana efektif masuk.",
-            "Tunda pengiriman barang atau pesanan hingga dana terkonfirmasi."
-        ],
-        "avatarMood": "CRITICAL_SHIELD",
-        "speechWarning": "Waspada! Verifikasi mutasi rekening m-banking Anda langsung sebelum mempercayai struk transfer ini."
-    }
+def analyze_image_with_gemini(image_bytes: bytes, mime_type: str = "image/jpeg") -> Tuple[Optional[Dict[str, Any]], Optional[ErrorDetail], Optional[int]]:
+    """
+    Analyzes an already-validated image buffer using Gemini Vision multimodal.
+    Strictly fail-closed: Never returns fake mock fallback.
+    Returns: (ai_result_dict, error_detail, http_status_code)
+    """
+    if not GENAI_AVAILABLE or genai is None:
+        logger.warning("Gemini Vision library 'google.generativeai' not installed.")
+        return None, ErrorDetail(
+            code="VISION_SERVICE_UNAVAILABLE",
+            message="Pustaka google.generativeai tidak tersedia pada server."
+        ), 503
 
-
-def analyze_image_with_gemini(image_data_base64: str) -> Optional[Dict[str, Any]]:
-    """Analyzes an image using Gemini Vision multimodal with local fallback."""
-    if not GENAI_AVAILABLE or not settings.GEMINI_API_KEY:
-        logger.info("Gemini Vision not available or GEMINI_API_KEY not configured. Using deterministic fallback.")
-        return analyze_image_fallback(image_data_base64)
+    if not settings.GEMINI_API_KEY:
+        logger.warning("GEMINI_API_KEY is not configured in backend settings.")
+        return None, ErrorDetail(
+            code="AI_KEY_NOT_CONFIGURED",
+            message="Kredensial GEMINI_API_KEY tidak dikonfigurasi di server backend."
+        ), 503
 
     try:
-        # Strip data URL prefix if present (e.g. data:image/png;base64,...)
-        if "," in image_data_base64:
-            header, encoded = image_data_base64.split(",", 1)
-            mime_type = header.split(";")[0].split(":")[1]
-        else:
-            encoded = image_data_base64
-            mime_type = "image/jpeg"
-
-        image_bytes = base64.b64decode(encoded)
-
+        genai.configure(api_key=settings.GEMINI_API_KEY, transport="rest")
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name=settings.GEMINI_MODEL,
             generation_config={
                 "response_mime_type": "application/json",
                 "temperature": 0.1
@@ -107,15 +83,56 @@ def analyze_image_with_gemini(image_data_base64: str) -> Optional[Dict[str, Any]
             "data": image_bytes
         }
 
-        response = model.generate_content([
-            "Verifikasi keaslian bukti transfer/gambar ini untuk mendeteksi penipuan:",
-            image_part
-        ])
+        import socket
+        old_timeout = socket.getdefaulttimeout()
+        try:
+            socket.setdefaulttimeout(8.0)
+            # Upstream call with 8.0s timeout target
+            response = model.generate_content(
+                [
+                    "Verifikasi keaslian bukti transfer/gambar ini untuk mendeteksi penipuan:",
+                    image_part
+                ],
+                request_options={"timeout": 8.0}
+            )
+        finally:
+            socket.setdefaulttimeout(old_timeout)
 
-        if response and response.text:
-            return json.loads(response.text)
+        if not response or not response.text:
+            return None, ErrorDetail(
+                code="INVALID_AI_RESPONSE",
+                message="Layanan AI mengembalikan respons kosong."
+            ), 502
+
+        try:
+            parsed_json = json.loads(response.text)
+            if not isinstance(parsed_json, dict) or "confidenceScore" not in parsed_json:
+                return None, ErrorDetail(
+                    code="INVALID_AI_RESPONSE",
+                    message="Struktur JSON dari AI tidak lengkap atau tidak memiliki 'confidenceScore'."
+                ), 502
+            return parsed_json, None, 200
+        except json.JSONDecodeError as jde:
+            return None, ErrorDetail(
+                code="INVALID_AI_RESPONSE",
+                message=f"Output dari AI bukan format JSON yang sah: {str(jde)}"
+            ), 502
+
     except Exception as e:
-        logger.error(f"Error calling Gemini Vision API: {e}")
-        return None
-
-    return None
+        err_msg = str(e).lower()
+        logger.error("Error calling Gemini Vision API (%s).", type(e).__name__)
+        if "deadline" in err_msg or "timed out" in err_msg or "timeout" in err_msg:
+            return None, ErrorDetail(
+                code="VISION_TIMEOUT",
+                message="Permintaan analisis ke upstream Gemini Vision melebihi batas waktu 8.0 detik."
+            ), 504
+        elif "quota" in err_msg or "429" in err_msg or "resourceexhausted" in err_msg:
+            return None, ErrorDetail(
+                code="AI_QUOTA_EXHAUSTED",
+                message="Batas kuota harian atau rate-limit API Gemini terlampaui."
+            ), 503
+        else:
+            return None, ErrorDetail(
+                code="VISION_SERVICE_UNAVAILABLE",
+                message="Gagal menghubungi layanan Gemini Vision."
+            ), 503

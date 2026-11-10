@@ -10,7 +10,7 @@ try:
     GENAI_AVAILABLE = True
     if settings.GEMINI_API_KEY:
         try:
-            genai.configure(api_key=settings.GEMINI_API_KEY)
+            genai.configure(api_key=settings.GEMINI_API_KEY, transport="rest")
         except Exception as e:
             logger.warning(f"Failed to configure Gemini API: {e}")
 except ImportError:
@@ -58,7 +58,7 @@ def analyze_with_gemini(scan_type: str, content: str) -> Optional[Dict[str, Any]
 
     try:
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name=settings.GEMINI_MODEL,
             generation_config={
                 "response_mime_type": "application/json",
                 "temperature": 0.2
@@ -67,13 +67,20 @@ def analyze_with_gemini(scan_type: str, content: str) -> Optional[Dict[str, Any]
         )
 
         user_prompt = f"Analisis konten berikut (Tipe Scan: {scan_type}):\n\n<content_to_analyze>\n{content}\n</content_to_analyze>"
-        response = model.generate_content(user_prompt)
+
+        import socket
+        old_timeout = socket.getdefaulttimeout()
+        try:
+            socket.setdefaulttimeout(8.0)
+            response = model.generate_content(user_prompt, request_options={"timeout": 8.0})
+        finally:
+            socket.setdefaulttimeout(old_timeout)
 
         if response and response.text:
             parsed = json.loads(response.text)
             return parsed
     except Exception as e:
-        logger.error(f"Error calling Gemini API: {e}")
+        logger.error("Error calling Gemini API (%s).", type(e).__name__)
         return None
 
     return None

@@ -153,44 +153,14 @@
           </h3>
           <p class="text-xs text-slate-400 mb-6">Pola ancaman siber yang teridentifikasi</p>
 
-          <div class="space-y-4">
+          <div id="categoryDistributionContainer" class="space-y-4">
             <div>
               <div class="flex items-center justify-between text-xs mb-1">
                 <span class="font-medium text-slate-300">SAFE (Aman)</span>
-                <span class="text-slate-400">16 deteksi (66.7%)</span>
+                <span class="text-slate-400">0 deteksi (0%)</span>
               </div>
               <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                <div class="bg-emerald-500 h-full rounded-full" style="width: 66.7%"></div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex items-center justify-between text-xs mb-1">
-                <span class="font-medium text-slate-300">FAKE JOB OFFER (Lowongan Fiktif)</span>
-                <span class="text-slate-400">4 deteksi (16.7%)</span>
-              </div>
-              <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                <div class="bg-rose-500 h-full rounded-full" style="width: 16.7%"></div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex items-center justify-between text-xs mb-1">
-                <span class="font-medium text-slate-300">OTP THEFT (Pencurian OTP)</span>
-                <span class="text-slate-400">2 deteksi (8.3%)</span>
-              </div>
-              <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                <div class="bg-rose-500 h-full rounded-full" style="width: 8.3%"></div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex items-center justify-between text-xs mb-1">
-                <span class="font-medium text-slate-300">TYPOSQUATTING (Phishing Bank)</span>
-                <span class="text-slate-400">2 deteksi (8.3%)</span>
-              </div>
-              <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                <div class="bg-amber-500 h-full rounded-full" style="width: 8.3%"></div>
+                <div class="bg-emerald-500 h-full rounded-full" style="width: 0%"></div>
               </div>
             </div>
           </div>
@@ -202,49 +172,7 @@
           </h3>
           <p class="text-xs text-slate-400 mb-6">Aktivitas deteksi mingguan real-time</p>
 
-          <div class="h-48 flex items-end justify-between gap-3 pt-6">
-            <div class="flex-1 flex flex-col items-center gap-2">
-              <div class="w-full max-w-[36px] bg-slate-800 rounded-t-lg h-16 flex items-end">
-                <div class="w-full bg-cyan-500 rounded-t-lg h-10"></div>
-              </div>
-              <span class="text-xs text-slate-400">Sen</span>
-            </div>
-            <div class="flex-1 flex flex-col items-center gap-2">
-              <div class="w-full max-w-[36px] bg-slate-800 rounded-t-lg h-28 flex items-end">
-                <div class="w-full bg-cyan-500 rounded-t-lg h-20"></div>
-              </div>
-              <span class="text-xs text-slate-400">Sel</span>
-            </div>
-            <div class="flex-1 flex flex-col items-center gap-2">
-              <div class="w-full max-w-[36px] bg-slate-800 rounded-t-lg h-20 flex items-end">
-                <div class="w-full bg-cyan-500 rounded-t-lg h-14"></div>
-              </div>
-              <span class="text-xs text-slate-400">Rab</span>
-            </div>
-            <div class="flex-1 flex flex-col items-center gap-2">
-              <div class="w-full max-w-[36px] bg-slate-800 rounded-t-lg h-36 flex items-end">
-                <div class="w-full bg-cyan-500 rounded-t-lg h-28"></div>
-              </div>
-              <span class="text-xs text-slate-400">Kam</span>
-            </div>
-            <div class="flex-1 flex flex-col items-center gap-2">
-              <div class="w-full max-w-[36px] bg-slate-800 rounded-t-lg h-24 flex items-end">
-                <div class="w-full bg-cyan-500 rounded-t-lg h-16"></div>
-              </div>
-              <span class="text-xs text-slate-400">Jum</span>
-            </div>
-            <div class="flex-1 flex flex-col items-center gap-2">
-              <div class="w-full max-w-[36px] bg-slate-800 rounded-t-lg h-32 flex items-end">
-                <div class="w-full bg-cyan-500 rounded-t-lg h-24"></div>
-              </div>
-              <span class="text-xs text-slate-400">Sab</span>
-            </div>
-            <div class="flex-1 flex flex-col items-center gap-2">
-              <div class="w-full max-w-[36px] bg-slate-800 rounded-t-lg h-16 flex items-end">
-                <div class="w-full bg-cyan-500 rounded-t-lg h-8"></div>
-              </div>
-              <span class="text-xs text-slate-400">Min</span>
-            </div>
+          <div id="weeklyTrendContainer" class="h-48 flex items-end justify-between gap-3 pt-6">
           </div>
         </div>
       </div>
@@ -453,72 +381,207 @@
 
     function renderResult(data) {
       const box = document.getElementById('simResult');
-      box.classList.remove('hidden');
-
+      const completed = data.success === true && data.status === 'COMPLETED' && data.riskLevel !== 'UNKNOWN';
       const isHigh = data.riskLevel === 'HIGH';
-      const isMed = data.riskLevel === 'MEDIUM';
+      const isWarning = data.riskLevel === 'MEDIUM' || !completed;
+      const textElement = (tag, className, text) => {
+        const element = document.createElement(tag);
+        element.className = className;
+        element.textContent = text;
+        return element;
+      };
 
       box.className = `rounded-2xl border p-6 sm:p-8 shadow-2xl transition-all ${
-        isHigh ? 'bg-rose-950/20 border-rose-900/60' : isMed ? 'bg-amber-950/20 border-amber-900/60' : 'bg-emerald-950/20 border-emerald-900/60'
+        isHigh ? 'bg-rose-950/20 border-rose-900/60' : isWarning ? 'bg-amber-950/20 border-amber-900/60' : 'bg-emerald-950/20 border-emerald-900/60'
       }`;
+      box.replaceChildren();
 
-      box.innerHTML = `
-        <div class="flex items-center gap-4 pb-6 border-b border-slate-800">
-          <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-lg ${
-            isHigh ? 'bg-rose-500/20 border-2 border-rose-500 text-rose-400' : isMed ? 'bg-amber-500/20 border-2 border-amber-500 text-amber-400' : 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400'
-          }">
-            ${isHigh ? '🛡️' : isMed ? '⚠️' : '🤖'}
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
-                isHigh ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : isMed ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-              }">
-                ${data.riskLevel} RISK • SKOR: ${data.riskScore}/100
-              </span>
-              <span class="text-xs text-slate-400">Kategori: ${data.threatCategory.replace(/_/g, ' ')}</span>
-            </div>
-            <h3 class="text-lg font-bold text-white mt-1">
-              Intervensi AI Avatar: "${data.avatarGuidance.speechText}"
-            </h3>
-          </div>
-        </div>
+      const header = document.createElement('div');
+      header.className = 'flex items-center gap-4 pb-6 border-b border-slate-800';
+      header.appendChild(textElement(
+        'div',
+        `w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-lg ${
+          isHigh ? 'bg-rose-500/20 border-2 border-rose-500 text-rose-400' : isWarning ? 'bg-amber-500/20 border-2 border-amber-500 text-amber-400' : 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400'
+        }`,
+        isHigh ? '🛡️' : isWarning ? '⚠️' : '🤖'
+      ));
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <div class="space-y-3">
-            <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">
-              Bukti & Indikator Deteksi (${data.detectionIndicators.length})
-            </h4>
-            <div class="space-y-2">
-              ${data.detectionIndicators.map(ind => `
-                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs">
-                  <div class="flex items-center justify-between font-bold text-white">
-                    <span>${ind.indicator}</span>
-                    <span class="text-[10px] text-rose-400 uppercase">${ind.severity}</span>
-                  </div>
-                  <p class="text-slate-400 text-[11px] mt-1">${ind.explanation}</p>
-                </div>
-              `).join('')}
-            </div>
-          </div>
+      const titleGroup = document.createElement('div');
+      const labels = document.createElement('div');
+      labels.className = 'flex items-center gap-2';
+      const score = data.riskScore === null || data.riskScore === undefined
+        ? 'Verifikasi Manual'
+        : `${data.riskScore}/100`;
+      labels.appendChild(textElement(
+        'span',
+        `text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+          isHigh ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : isWarning ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+        }`,
+        `${data.riskLevel || 'UNKNOWN'} RISK • SKOR: ${score}`
+      ));
+      labels.appendChild(textElement(
+        'span',
+        'text-xs text-slate-400',
+        `Kategori: ${(data.threatCategory || 'PERIKSA MANUAL').replace(/_/g, ' ')}`
+      ));
+      titleGroup.appendChild(labels);
+      titleGroup.appendChild(textElement(
+        'h3',
+        'text-lg font-bold text-white mt-1',
+        `Intervensi AI Avatar: "${data.avatarGuidance?.speechText || data.summary || 'Lakukan verifikasi manual.'}"`
+      ));
+      header.appendChild(titleGroup);
+      box.appendChild(header);
 
-          <div class="space-y-3">
-            <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">
-              Rekomendasi Tindakan Pengguna
-            </h4>
-            <div class="space-y-2">
-              ${data.recommendedActions.map(action => `
-                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs flex items-start gap-2.5">
-                  <span class="text-cyan-400 font-bold">✓</span>
-                  <span class="text-slate-300 leading-relaxed">${action}</span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        </div>
-      `;
+      if (!completed) {
+        box.appendChild(textElement(
+          'p',
+          'mt-4 p-3 rounded-lg bg-amber-950/30 border border-amber-900/50 text-xs text-amber-200',
+          `Analisis belum selesai. ${data.summary || ''} ${data.error?.message || ''}`.trim()
+        ));
+      }
+
+      const columns = document.createElement('div');
+      columns.className = 'grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6';
+      const indicators = Array.isArray(data.detectionIndicators) ? data.detectionIndicators : [];
+      const indicatorColumn = document.createElement('div');
+      indicatorColumn.className = 'space-y-3';
+      indicatorColumn.appendChild(textElement(
+        'h4',
+        'text-xs font-bold text-slate-300 uppercase tracking-wider',
+        `Bukti & Indikator Deteksi (${indicators.length})`
+      ));
+      const indicatorList = document.createElement('div');
+      indicatorList.className = 'space-y-2';
+      if (indicators.length === 0) {
+        indicatorList.appendChild(textElement(
+          'p',
+          'text-xs text-slate-400 italic',
+          completed ? 'Tidak ditemukan indikator berbahaya pada input ini.' : 'Tidak ada indikator; hasil belum dapat diverifikasi.'
+        ));
+      }
+      indicators.forEach((indicator) => {
+        const row = document.createElement('div');
+        row.className = 'p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs';
+        const rowHeader = document.createElement('div');
+        rowHeader.className = 'flex items-center justify-between font-bold text-white';
+        rowHeader.appendChild(textElement('span', '', indicator.indicator || 'Indikator'));
+        rowHeader.appendChild(textElement('span', 'text-[10px] text-rose-400 uppercase', indicator.severity || ''));
+        row.appendChild(rowHeader);
+        row.appendChild(textElement('p', 'text-slate-400 text-[11px] mt-1', indicator.explanation || ''));
+        indicatorList.appendChild(row);
+      });
+      indicatorColumn.appendChild(indicatorList);
+      columns.appendChild(indicatorColumn);
+
+      const actionColumn = document.createElement('div');
+      actionColumn.className = 'space-y-3';
+      actionColumn.appendChild(textElement('h4', 'text-xs font-bold text-slate-300 uppercase tracking-wider', 'Rekomendasi Tindakan Pengguna'));
+      const actionList = document.createElement('div');
+      actionList.className = 'space-y-2';
+      (Array.isArray(data.recommendedActions) ? data.recommendedActions : []).forEach((action) => {
+        const row = document.createElement('div');
+        row.className = 'p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs flex items-start gap-2.5';
+        row.appendChild(textElement('span', 'text-cyan-400 font-bold', '✓'));
+        row.appendChild(textElement('span', 'text-slate-300 leading-relaxed', action));
+        actionList.appendChild(row);
+      });
+      actionColumn.appendChild(actionList);
+      columns.appendChild(actionColumn);
+      box.appendChild(columns);
     }
+
+    function makeTextElement(tag, className, text) {
+      const element = document.createElement(tag);
+      element.className = className;
+      element.textContent = text;
+      return element;
+    }
+
+    async function loadAnalyticsData() {
+      try {
+        const res = await fetch('http://localhost:8000/api/v1/analytics/overview', {
+          headers: { 'X-Trasco-Source': 'Dashboard-Client' }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Update stats
+        if (data.riskBreakdown) {
+          document.getElementById('statTotal').textContent = data.riskBreakdown.totalScans;
+          document.getElementById('statHigh').textContent = data.riskBreakdown.highRiskCount;
+          document.getElementById('statMed').textContent = data.riskBreakdown.mediumRiskCount;
+          document.getElementById('statLow').textContent = data.riskBreakdown.lowRiskCount;
+        }
+
+        if (data.securityHygieneScore !== undefined) {
+          document.getElementById('scoreText').textContent = data.securityHygieneScore;
+          const ring = document.getElementById('scoreRing');
+          if (ring) {
+            ring.style.strokeDashoffset = 251.2 - (251.2 * data.securityHygieneScore) / 100;
+          }
+        }
+
+        // Update category distribution
+        const catBox = document.getElementById('categoryDistributionContainer');
+        if (catBox && data.threatDistribution) {
+          catBox.replaceChildren();
+          if (data.threatDistribution.length === 0) {
+            catBox.appendChild(makeTextElement(
+              'p',
+              'text-xs text-slate-500 py-6 text-center italic',
+              'Belum ada ancaman terdeteksi (Basis data bersih).'
+            ));
+          } else {
+            data.threatDistribution.forEach((item) => {
+              const row = document.createElement('div');
+              row.className = 'space-y-1.5';
+              const labels = document.createElement('div');
+              labels.className = 'flex items-center justify-between text-xs';
+              const category = String(item.category || 'UNKNOWN');
+              labels.appendChild(makeTextElement('span', 'font-medium text-slate-300', category));
+              labels.appendChild(makeTextElement('span', 'text-slate-400', `${item.count} deteksi (${item.percentage}%)`));
+              row.appendChild(labels);
+              const track = document.createElement('div');
+              track.className = 'w-full bg-slate-800 rounded-full h-2 overflow-hidden';
+              const bar = document.createElement('div');
+              bar.className = `h-full rounded-full transition-all duration-700 ${
+                category === 'SAFE' ? 'bg-emerald-500' : category.includes('JOB') || category.includes('OTP') ? 'bg-rose-500' : 'bg-amber-500'
+              }`;
+              const percentage = Number(item.percentage);
+              bar.style.width = `${Math.max(0, Math.min(100, Number.isFinite(percentage) ? percentage : 0))}%`;
+              track.appendChild(bar);
+              row.appendChild(track);
+              catBox.appendChild(row);
+            });
+          }
+        }
+
+        // Update weekly trends
+        const trendBox = document.getElementById('weeklyTrendContainer');
+        if (trendBox && data.weeklyTrends) {
+          const maxVal = Math.max(...data.weeklyTrends.map(t => t.scans), 6);
+          trendBox.replaceChildren();
+          data.weeklyTrends.forEach((trend) => {
+            const column = document.createElement('div');
+            column.className = 'flex-1 flex flex-col items-center gap-2';
+            const track = document.createElement('div');
+            track.className = 'w-full max-w-[36px] bg-slate-800 rounded-t-lg h-36 flex items-end';
+            const bar = document.createElement('div');
+            bar.className = 'w-full bg-gradient-to-t from-cyan-600 to-sky-400 rounded-t-lg transition-all duration-500';
+            bar.style.height = `${Math.max(15, (trend.scans / maxVal) * 100)}%`;
+            track.appendChild(bar);
+            column.appendChild(track);
+            column.appendChild(makeTextElement('span', 'text-xs text-slate-400 font-semibold', trend.date));
+            trendBox.appendChild(column);
+          });
+        }
+      } catch (e) {
+        console.warn('Backend unavailable for standalone dashboard live fetch:', e);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAnalyticsData);
   </script>
 </body>
 </html>
-

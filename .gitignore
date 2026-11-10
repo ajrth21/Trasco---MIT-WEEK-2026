@@ -1,5 +1,8 @@
 # Python
 __pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 *.py[cod]
 *$py.class
 *.so
@@ -11,7 +14,12 @@ ENV/
 *.db-shm
 *.db-wal
 *.db-journal
+*.sqlite
 *.sqlite3
+*.sqlite-*
+*.sqlite3-*
+*.coverage
+coverage/
 
 # Node / Frontend
 node_modules/
@@ -23,6 +31,11 @@ build/
 # Environment & Secrets
 .env
 .env.local
+.env.*
+!.env.example
+
+# Local task backups
+.phase7_backups/
 
 # IDE
 .vscode/
@@ -32,4 +45,3 @@ build/
 # OS
 .DS_Store
 Thumbs.db
-
