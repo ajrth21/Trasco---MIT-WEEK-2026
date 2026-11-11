@@ -206,6 +206,7 @@ async function analyzeContent(scanType, content, metadata = {}) {
 
   const res = await fetch(`${baseUrl}${endpoint}`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 
       'Content-Type': 'application/json',
       'X-Trasco-Source': 'Extension-Local'
@@ -314,6 +315,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const baseUrl = await getBackendUrl();
         const res = await fetch(`${baseUrl}/api/v1/detect/analyze-image`, {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             'X-Trasco-Source': 'Extension-Local'

@@ -8,10 +8,16 @@ from app.schemas.analytics import (
 )
 
 
-def compute_security_overview(db: Session, user_id: str = None) -> SecurityOverviewResponse:
+def compute_security_overview(
+    db: Session,
+    user_id: str | None = None,
+    visitor_id: str | None = None,
+) -> SecurityOverviewResponse:
     query = db.query(DetectionLog)
-    if user_id:
+    if user_id is not None:
         query = query.filter(DetectionLog.user_id == user_id)
+    elif visitor_id is not None:
+        query = query.filter(DetectionLog.visitor_id == visitor_id)
 
     total_scans = query.with_entities(func.count(DetectionLog.id)).scalar() or 0
     risk_counts = dict(

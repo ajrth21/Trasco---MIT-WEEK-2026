@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { scanContent } from '../services/api';
 import { AnalyzeResponse } from '../types';
 
-export const Simulator: React.FC = () => {
+interface SimulatorProps {
+  onScanComplete: () => Promise<void>;
+}
+
+export const Simulator: React.FC<SimulatorProps> = ({ onScanComplete }) => {
   const [scanType, setScanType] = useState<'TEXT' | 'URL'>('TEXT');
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -57,6 +61,7 @@ export const Simulator: React.FC = () => {
     try {
       const res = await scanContent(typeToScan, textToScan);
       setResult(res);
+      await onScanComplete();
 
       // Play audio TTS demo if available
       if ('speechSynthesis' in window && res.avatarGuidance?.speechText) {

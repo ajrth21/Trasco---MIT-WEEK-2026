@@ -3,7 +3,7 @@ import hashlib
 import os
 import re
 from datetime import datetime, timezone
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, g, request, jsonify, make_response
 from flask_cors import CORS
 from app.core.config import settings, validate_startup_security
 from app.core.database import is_application_ready, set_application_ready, probe_schema_compatibility
@@ -13,6 +13,12 @@ from app.models.detection import DetectionLog
 from app.services.risk_scorer import orchestrate_detection, orchestrate_image_detection
 from app.services.analytics_service import compute_security_overview
 from app.core.scrubber import scrub_pii
+from app.core.visitor import (
+    VISITOR_COOKIE_NAME,
+    create_visitor_id,
+    set_visitor_cookie,
+    verify_visitor_cookie,
+)
 
 # Validate configuration on module import to ensure WSGI deployment fail-closed protection
 validate_startup_security(settings)
@@ -70,7 +76,7 @@ TRUSTED_ORIGINS = list(_TRUSTED_ORIGINS) + [
     r"^edge-extension://.*$",     # Edge extension (any ID)
 ]
 
-CORS(app, resources={r"/*": {"origins": TRUSTED_ORIGINS}}, supports_credentials=False)
+CORS(app, resources={r"/*": {"origins": TRUSTED_ORIGINS}}, supports_credentials=True)
 
 # DDL has been decoupled: worker runtimes never execute Base.metadata.create_all() at import time.
 
@@ -172,7 +178,6 @@ def verify_request_security():
     # Allow unauthenticated liveness and docs
     if request.path in ["/health", "/health/ready", "/docs", "/openapi.json"]:
         return None
-
     # Allow genuine CORS preflight
     if request.method == "OPTIONS":
         if "Origin" in request.headers and "Access-Control-Request-Method" in request.headers:
@@ -201,6 +206,29 @@ def verify_request_security():
         return jsonify({"error": "Missing or invalid TRASCO client handshake header."}), 403
 
     return None
+
+
+@app.before_request
+def assign_browser_visitor():
+    if not request.path.startswith("/api/v1/"):
+        return None
+
+    visitor_id = verify_visitor_cookie(request.cookies.get(VISITOR_COOKIE_NAME))
+    g.trasco_visitor_id = visitor_id or create_visitor_id()
+    g.trasco_visitor_cookie_is_new = visitor_id is None
+    return None
+
+
+@app.after_request
+def persist_browser_visitor(response):
+    visitor_id = getattr(g, "trasco_visitor_id", None)
+    if visitor_id and getattr(g, "trasco_visitor_cookie_is_new", False):
+        set_visitor_cookie(
+            response,
+            visitor_id,
+            secure=not settings.DEBUG and not app.config.get("TESTING", False),
+        )
+    return response
 
 
 @app.route("/health", methods=["GET"])
@@ -243,6 +271,7 @@ def analyze_content():
         target_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
         log_entry = DetectionLog(
             id=result["scanId"],
+            visitor_id=g.trasco_visitor_id,
             scan_type=scan_type,
             target_hash=target_hash,
             sanitized_snippet=snippet,
@@ -380,6 +409,7 @@ def analyze_image():
         try:
             log_entry = DetectionLog(
                 id=result["scanId"],
+                visitor_id=g.trasco_visitor_id,
                 scan_type="IMAGE",
                 target_hash=hashlib.sha256(content[:200].encode("utf-8")).hexdigest(),
                 sanitized_snippet="[Image Scan: Transfer Slip / Visual Content]",
@@ -405,7 +435,11 @@ def analyze_image():
 def get_analytics():
     db = SessionLocal()
     try:
-        overview = compute_security_overview(db=db, user_id=None)
+        overview = compute_security_overview(
+            db=db,
+            user_id=None,
+            visitor_id=g.trasco_visitor_id,
+        )
         return jsonify(overview.model_dump())
     finally:
         db.close()
@@ -415,7 +449,13 @@ def get_analytics():
 def get_history():
     db = SessionLocal()
     try:
-        logs = db.query(DetectionLog).order_by(DetectionLog.created_at.desc()).limit(30).all()
+        logs = (
+            db.query(DetectionLog)
+            .filter(DetectionLog.visitor_id == g.trasco_visitor_id)
+            .order_by(DetectionLog.created_at.desc())
+            .limit(30)
+            .all()
+        )
         return jsonify([
             {
                 "id": l.id,

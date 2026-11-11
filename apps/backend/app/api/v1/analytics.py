@@ -6,24 +6,38 @@ from app.models.detection import DetectionLog
 from app.schemas.analytics import (
     SecurityOverviewResponse
 )
-from app.api.v1.auth import get_optional_current_user
+from app.api.v1.auth import get_browser_visitor_id, get_optional_current_user
 from app.services.analytics_service import compute_security_overview
 
 router = APIRouter(prefix="/analytics", tags=["Security Analytics"])
 
 
 @router.get("/overview", response_model=SecurityOverviewResponse)
-def get_overview(db: Session = Depends(get_db), current_user = Depends(get_optional_current_user)):
+def get_overview(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_optional_current_user),
+    visitor_id: str = Depends(get_browser_visitor_id),
+):
     user_id = current_user.id if current_user else None
-    return compute_security_overview(db=db, user_id=user_id)
+    return compute_security_overview(
+        db=db,
+        user_id=user_id,
+        visitor_id=None if current_user else visitor_id,
+    )
 
 
 @router.get("/history")
-def get_history(db: Session = Depends(get_db), current_user = Depends(get_optional_current_user)):
+def get_history(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_optional_current_user),
+    visitor_id: str = Depends(get_browser_visitor_id),
+):
     user_id = current_user.id if current_user else None
     query = db.query(DetectionLog)
     if user_id:
         query = query.filter(DetectionLog.user_id == user_id)
+    else:
+        query = query.filter(DetectionLog.visitor_id == visitor_id)
     logs = query.order_by(desc(DetectionLog.created_at)).limit(30).all()
     
     return [

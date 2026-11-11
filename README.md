@@ -87,6 +87,18 @@ Untuk production, build dashboard dengan `VITE_API_BASE_URL=` agar permintaan AP
 
 Jalankan Flask melalui Gunicorn (bukan development server), set `DEBUG=False`, dan gunakan `SECRET_KEY` acak minimal 32 karakter. Inisialisasi database baru secara eksplisit dengan `python -m app.core.init_db --url sqlite:///./trasco_local.db --confirm-persistent`. Simpan `.env` dengan izin terbatas dan jangan pernah mengarahkan database ke `trasco.db` yang diproteksi.
 
+### Isolasi Data Dashboard
+
+Log dashboard dianalisis per browser menggunakan cookie penanda acak yang ditandatangani server, `HttpOnly`, dan `Secure` di production. Pastikan dashboard dan API memakai host yang sama; development cross-origin harus menyertakan origin dashboard di `TRASCO_ALLOWED_ORIGINS`. Isolasi ini berbasis profil browser/perangkat, bukan akun: menghapus cookie atau memakai browser lain akan memulai riwayat baru. Jangan gunakan ini sebagai pengganti autentikasi untuk data yang memerlukan sinkronisasi antarperangkat.
+
+Saat memperbarui database production yang sudah ada, buat backup terlebih dahulu, lalu jalankan migrasi aditif satu kali dari direktori `apps/backend` dengan konfigurasi `.env` production:
+
+```bash
+python -m app.core.migrate_browser_identity
+```
+
+Migrasi hanya menambahkan kolom nullable dan indeks `visitor_id`; tidak menghapus atau mengubah rekaman lama. Rekaman lama yang tidak memiliki pemilik browser tidak ditampilkan kepada pengunjung baru, karena kepemilikannya tidak dapat ditentukan dengan aman. Jalankan migrasi sebelum merestart backend versi baru; readiness akan tetap gagal sampai skema sesuai.
+
 ## Fitur dan Status Saat Ini
 
 | Kemampuan | Status |
@@ -220,7 +232,7 @@ Ekstensi meminta izin `storage`, `activeTab`, dan `contextMenus`, serta menginje
 - **Pindai URL / Teks:** Pada simulator dasbor atau popup ekstensi, masukkan tautan atau isi pesan teks, lalu jalankan pemindaian. Hasil pemindaian menyajikan tingkat risiko (*risk level*), skor risiko numerik, rincian indikator ancaman, dan rekomendasi mitigasi.
 - **Pindai Gambar Penipuan:** Gunakan fitur unggah gambar pada popup ekstensi TRASCO. Sistem memvalidasi integritas biner payload, tanda tangan MIME, ukuran biner, dimensi, dan jumlah piksel sebelum meminta analisis multimodal AI Gemini Vision.
 - **Interpretasi Hasil:** Status `COMPLETED` menandakan analisis berhasil diselesaikan. Status `UNKNOWN` dengan skor `null` menandakan analisis gagal diselesaikan oleh AI/jaringan; sesuai aturan *Zero False-Safe*, status ini **tidak boleh diartikan aman**. Selalu konfirmasikan keabsahan bukti transfer melalui aplikasi perbankan resmi Anda.
-- **Analitik & Riwayat:** Halaman dasbor menampilkan metrik agregat pemindaian, distribusi kategori ancaman, riwayat pemindaian terakhir, dan tren aktivitas mingguan. Nilai awal yang kosong adalah angka nol asli dari database, bukan data *dummy*.
+- **Analitik & Riwayat:** Halaman dasbor menampilkan metrik per browser dari catatan backend, distribusi kategori ancaman, riwayat pemindaian, dan tren aktivitas mingguan. Data dimuat ulang setelah pemindaian, saat tab kembali aktif, dan secara berkala; tidak ada data contoh sebagai fallback.
 - **Edukasi Keamanan:** Baca rekomendasi mitigasi personal yang ditampilkan di bagian bawah dasbor untuk meningkatkan kewaspadaan digital jangka panjang.
 
 ## Referensi API — Runner Utama Flask
@@ -233,8 +245,8 @@ Permintaan dari halaman peramban harus berasal dari *origin* lokal yang diizinka
 | `GET /health/ready` | Pemeriksaan kesiapan (readiness) ORM basis data; tanpa body. | `200` jika skema kompatibel; `503` jika belum siap. |
 | `POST /api/v1/detect/analyze` | JSON: `{"scanType":"TEXT","content":"..."}` atau `{"scanType":"URL","content":"..."}`; metadata opsional. | Hasil analisis mencakup `success`, `status`, `scanId`, `riskLevel`, `riskScore`, `threatCategory`, indikator ancaman, rekomendasi, dan panduan avatar. Format tidak valid menghasilkan `400`. |
 | `POST /api/v1/detect/analyze-image` | JSON dengan `content` (Data URL Base64), `mimeType` opsional (`image/jpeg`, `image/png`, atau `image/webp`), nama berkas opsional. | Menghasilkan status `COMPLETED` atau status kegagalan terisolasi seperti `INVALID_REQUEST`, `INVALID_IMAGE`, `ANALYSIS_UNAVAILABLE`, atau `ANALYSIS_FAILED`. Kegagalan menghasilkan `riskLevel: "UNKNOWN"` dan `riskScore: null`; kode HTTP `400`, `413`, `415`, `422`, `500`, `502`, `503`, atau `504`. |
-| `GET /api/v1/analytics/overview` | Mengambil agregasi metrik risiko, distribusi ancaman, tren mingguan, dan riwayat. | Catatan pemindaian diagregasikan langsung dari seluruh data riwayat basis data. |
-| `GET /api/v1/analytics/history` | Mengambil daftar riwayat pemindaian; tanpa body. | Mengembalikan hingga 30 catatan pemindaian terbaru. Skor yang gagal berstatus `null`. |
+| `GET /api/v1/analytics/overview` | Mengambil agregasi metrik risiko, distribusi ancaman, tren mingguan, dan riwayat. | Catatan pemindaian dibatasi ke browser pemilik cookie; cookie dibuat otomatis bila belum ada. |
+| `GET /api/v1/analytics/history` | Mengambil daftar riwayat pemindaian; tanpa body. | Mengembalikan hingga 30 catatan milik browser tersebut. Skor yang gagal berstatus `null`. |
 
 Batas unggahan citra yang diizinkan adalah maksimal 5 MiB setelah didekode, dengan batas string Base64 sebesar 7 MiB dan batas HTTP request body sebesar 10 MiB.
 

@@ -1,10 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.models.base import get_db
 from app.models.user import User, SecurityPreference
 from app.schemas.auth import UserRegister, UserLogin, Token, UserOut
 from app.core.security import verify_password, get_password_hash, create_access_token, decode_access_token
+from app.core.visitor import (
+    VISITOR_COOKIE_NAME,
+    create_visitor_id,
+    set_visitor_cookie,
+    verify_visitor_cookie,
+)
+from app.core.config import settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
@@ -37,6 +44,16 @@ def get_optional_current_user(token: str = Depends(oauth2_scheme), db: Session =
     if not payload or "sub" not in payload:
         return None
     return db.query(User).filter(User.id == payload["sub"]).first()
+
+
+def get_browser_visitor_id(request: Request, response: Response) -> str:
+    visitor_id = verify_visitor_cookie(request.cookies.get(VISITOR_COOKIE_NAME))
+    if visitor_id:
+        return visitor_id
+
+    visitor_id = create_visitor_id()
+    set_visitor_cookie(response, visitor_id, secure=not settings.DEBUG)
+    return visitor_id
 
 
 @router.post("/register", response_model=Token)
@@ -83,4 +100,3 @@ def login(login_in: UserLogin, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
     return UserOut.model_validate(current_user)
-
