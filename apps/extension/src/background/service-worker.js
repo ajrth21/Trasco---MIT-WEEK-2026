@@ -7,12 +7,26 @@ const DEFAULT_CONFIG = {
   protectionEnabled: true,
   audioAlertEnabled: true,
   avatarEnabled: true,
-  backendUrl: 'http://localhost:8000'
+  backendUrl: 'https://trasco.oscspace.online'
 };
+
+const DEFAULT_BACKEND_URL = 'https://trasco.oscspace.online';
+
+async function getBackendUrl() {
+  const { backendUrl } = await chrome.storage.local.get(['backendUrl']);
+  if (!backendUrl || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(backendUrl)) {
+    await chrome.storage.local.set({ backendUrl: DEFAULT_BACKEND_URL });
+    return DEFAULT_BACKEND_URL;
+  }
+  return backendUrl;
+}
 
 // Initialize settings and context menus on install
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.get(DEFAULT_CONFIG, (stored) => {
+    if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(stored.backendUrl)) {
+      stored.backendUrl = DEFAULT_BACKEND_URL;
+    }
     chrome.storage.local.set(stored);
   });
 
@@ -114,7 +128,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (navigationDebounceTimer) clearTimeout(navigationDebounceTimer);
 
     navigationDebounceTimer = setTimeout(() => {
-      chrome.storage.local.get(['protectionEnabled', 'backendUrl'], async (cfg) => {
+      chrome.storage.local.get(['protectionEnabled'], async (cfg) => {
         if (!cfg.protectionEnabled) return;
 
         try {
@@ -187,8 +201,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 
 // Core API communication with Security Handshake Header
 async function analyzeContent(scanType, content, metadata = {}) {
-  const cfg = await chrome.storage.local.get(['backendUrl']);
-  const baseUrl = cfg.backendUrl || 'http://localhost:8000';
+  const baseUrl = await getBackendUrl();
   const endpoint = scanType === 'IMAGE' ? '/api/v1/detect/analyze-image' : '/api/v1/detect/analyze';
 
   const res = await fetch(`${baseUrl}${endpoint}`, {
@@ -298,8 +311,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
       let responsePayload = null;
       try {
-        const cfg = await chrome.storage.local.get(['backendUrl']);
-        const baseUrl = cfg.backendUrl || 'http://localhost:8000';
+        const baseUrl = await getBackendUrl();
         const res = await fetch(`${baseUrl}/api/v1/detect/analyze-image`, {
           method: 'POST',
           headers: {

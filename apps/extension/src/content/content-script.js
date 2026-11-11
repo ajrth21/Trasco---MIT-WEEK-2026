@@ -379,10 +379,7 @@
   });
 
   dashboardBtn.addEventListener('click', () => {
-    chrome.storage.local.get(['backendUrl'], (cfg) => {
-      const url = 'http://localhost:5173';
-      window.open(url, '_blank');
-    });
+    window.open('https://trasco.oscspace.online', '_blank');
   });
 
   // Audio Playback Button (User-gesture driven - 100% compliant with browser autoplay policies)

@@ -81,11 +81,17 @@ curl -sS -X POST http://127.0.0.1:8000/api/v1/detect/analyze \
 
 Skrip inisialisasi akan membuat tabel yang belum ada, namun tidak melakukan migrasi pada basis data yang sudah terisi. Gunakan basis data lokal baru yang tidak berisi data penting yang harus dipertahankan. Jangan pernah mengarahkannya ke `apps/backend/trasco.db`.
 
+## Catatan Deploy VPS
+
+Untuk production, build dashboard dengan `VITE_API_BASE_URL=` agar permintaan API menggunakan origin yang sama; Nginx dapat meneruskan `/api/` ke Gunicorn di `127.0.0.1:8000`. Atur `TRASCO_ALLOWED_ORIGINS` di `apps/backend/.env` ke origin dashboard yang persis, misalnya `https://trasco.example.com` atau `http://ALAMAT_IP_VPS`. Jangan membuka port backend `8000` ke internet.
+
+Jalankan Flask melalui Gunicorn (bukan development server), set `DEBUG=False`, dan gunakan `SECRET_KEY` acak minimal 32 karakter. Inisialisasi database baru secara eksplisit dengan `python -m app.core.init_db --url sqlite:///./trasco_local.db --confirm-persistent`. Simpan `.env` dengan izin terbatas dan jangan pernah mengarahkan database ke `trasco.db` yang diproteksi.
+
 ## Fitur dan Status Saat Ini
 
 | Kemampuan | Status |
 |---|---|
-| Deteksi URL dan teks | Diimplementasikan pada Flask API dengan heuristik deterministik, mencakup promosi judi online, teks tersamarkan (*obfuscated/leetspeak*), dan pemendek tautan URL; analisis Gemini bersifat opsional. |
+| Deteksi URL dan teks | Diimplementasikan pada Flask API dengan heuristik deterministik, mencakup promosi judi online, teks tersamarkan (*obfuscated/leetspeak*), pemendek tautan URL, serta pola bonus-referral dan penukaran hadiah yang mencurigakan; analisis Gemini bersifat opsional. |
 | Validasi unggahan gambar | Diimplementasikan pada popup ekstensi dan backend untuk format JPEG, PNG, dan WebP, dengan batasan ketat ukuran payload, dimensi, dan jumlah piksel (*anti-decompression bomb*). |
 | Analisis penipuan gambar (Image Scam) | Analisis Gemini Vision mencakup promosi mencurigakan, dokumen fiktif, rekayasa sosial, jebakan unduhan APK berbahaya, dan bukti transfer palsu; membutuhkan kunci API aktif dan model upstream yang tersedia. Tanpa keduanya, API mengembalikan hasil `UNKNOWN` (*fail-closed*). |
 | Persistensi pemindaian & analitik | Diimplementasikan dengan SQLAlchemy dan SQLite. Pemindaian gambar yang gagal disimpan dengan tingkat risiko `UNKNOWN` dan skor sentinel, bukan skor risiko numerik buatan. |
@@ -337,4 +343,3 @@ node --check apps/extension/src/popup/popup.js
 ## Penghargaan & Pengakuan (Acknowledgements)
 
 TRASCO dikembangkan secara khusus untuk **MIT UNMUL 2026 Hackathon, Web Development — Cybersecurity Track**. Hak cipta dan lisensi perangkat lunak dilindungi sesuai ketentuan proyek monorepo TRASCO.
-

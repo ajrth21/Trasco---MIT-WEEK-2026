@@ -1,5 +1,6 @@
 import json
 import hashlib
+import os
 import re
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify, make_response
@@ -50,16 +51,21 @@ def request_entity_too_large(error=None):
     }), 413
 
 # --- ISSUE-SEC-01: Strict Origin Allowlist (replaces wildcard CORS) ---
-# Exact local origins that are trusted for both CORS and the application gatekeeper.
-_TRUSTED_LOCAL_ORIGINS = {
+# Add production dashboard origins through TRASCO_ALLOWED_ORIGINS (comma-separated).
+_TRUSTED_ORIGINS = {
     "http://localhost:5173",      # Vite dashboard dev server
     "http://127.0.0.1:5173",
     "http://localhost:8000",      # Backend self-referencing (rare)
     "http://127.0.0.1:8000",
 }
+_TRUSTED_ORIGINS.update(
+    origin.strip()
+    for origin in os.getenv("TRASCO_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+)
 # flask-cors origin list: includes the exact origins + regex patterns for
 # dynamic browser extension IDs (chrome-extension://<id>, edge-extension://<id>).
-TRUSTED_ORIGINS = list(_TRUSTED_LOCAL_ORIGINS) + [
+TRUSTED_ORIGINS = list(_TRUSTED_ORIGINS) + [
     r"^chrome-extension://.*$",   # Chrome extension (any ID)
     r"^edge-extension://.*$",     # Edge extension (any ID)
 ]
@@ -131,7 +137,7 @@ def guard_application_readiness():
             if "Origin" in request.headers and "Access-Control-Request-Method" in request.headers:
                 origin = request.headers.get("Origin", "")
                 is_ext = origin.startswith("chrome-extension://") or origin.startswith("edge-extension://")
-                if is_ext or origin in _TRUSTED_LOCAL_ORIGINS:
+                if is_ext or origin in _TRUSTED_ORIGINS:
                     resp = make_response(jsonify({
                         "error": "Service Unavailable",
                         "detail": "Application startup unready."
@@ -181,7 +187,7 @@ def verify_request_security():
             origin.startswith("chrome-extension://")
             or origin.startswith("edge-extension://")
         )
-        is_trusted_local = origin in _TRUSTED_LOCAL_ORIGINS
+        is_trusted_local = origin in _TRUSTED_ORIGINS
 
         # Reject any origin not on the allowlist
         if not (is_extension or is_trusted_local):

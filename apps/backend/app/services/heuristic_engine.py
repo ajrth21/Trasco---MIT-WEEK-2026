@@ -1,6 +1,6 @@
 import re
 import math
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlparse
 from typing import Dict, List, Any
 
 
@@ -311,7 +311,31 @@ def analyze_url_heuristics(url_str: str) -> Dict[str, Any]:
                     threat_category = "TYPOSQUATTING"
                     break
 
-    # 7. Phishing Keywords in Path or Host
+    # 7. Reward and gift-claim URL patterns
+    reward_terms = {"bonus", "hadiah", "gift", "redeem", "reward", "claim", "klaim", "jackpot"}
+    normalized_host = re.sub(r"[^a-z0-9]", "", hostname)
+    normalized_path = re.sub(r"[^a-z0-9]", "", path)
+    host_reward_terms = {term for term in reward_terms if term in normalized_host}
+    path_reward_terms = {term for term in reward_terms if term in normalized_path}
+    query_keys = {key.lower() for key, _ in parse_qsl(parsed.query, keep_blank_values=True)}
+    has_referral_registration = bool(query_keys & {"register", "registration", "daftar"}) and bool(
+        query_keys & {"ref", "referral", "refer"}
+    )
+    reward_signup_pattern = bool(host_reward_terms) and has_referral_registration
+    gift_redemption_pattern = {"redeem", "gift"}.issubset(path_reward_terms)
+
+    if reward_signup_pattern or gift_redemption_pattern:
+        heuristic_score += 35
+        pattern_name = "Bonus referral dan pendaftaran" if reward_signup_pattern else "Penukaran hadiah/reward"
+        indicators.append({
+            "indicator": f"Pola URL promosi berisiko ({pattern_name})",
+            "severity": "MEDIUM",
+            "explanation": "Kombinasi klaim bonus/hadiah dengan pendaftaran referral atau halaman penukaran perlu diverifikasi melalui kanal resmi; pola ini bukan bukti tunggal bahwa situs berbahaya."
+        })
+        if threat_category == "SAFE":
+            threat_category = "SUSPICIOUS_PROMOTION"
+
+    # 8. Phishing Keywords in Path or Host
     phish_keywords = ["login", "verifikasi", "klaim", "hadiah", "otp", "bantuan", "update-data", "secure"]
     matched_kws = [kw for kw in phish_keywords if kw in hostname or kw in path]
     if matched_kws and heuristic_score > 0:
