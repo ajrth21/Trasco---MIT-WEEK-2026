@@ -68,6 +68,7 @@
 
   <!-- Main Container -->
   <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div id="dashboardError" class="hidden mb-6 p-4 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs"></div>
 
     <!-- VIEW 1: OVERVIEW -->
     <div id="viewOverview" class="space-y-8">
@@ -80,18 +81,18 @@
             <div class="relative w-32 h-32 flex items-center justify-center">
               <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="40" stroke="#1e293b" stroke-width="8" fill="transparent" />
-                <circle id="scoreRing" cx="50" cy="50" r="40" stroke="#10b981" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="30" stroke-linecap="round" fill="transparent" />
+                <circle id="scoreRing" cx="50" cy="50" r="40" stroke="#ef4444" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" fill="transparent" />
               </svg>
               <div class="absolute flex flex-col items-center justify-center text-center">
-                <span id="scoreText" class="text-3xl font-extrabold text-white">88</span>
+                <span id="scoreText" class="text-3xl font-extrabold text-white">0</span>
                 <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Skor Higienis</span>
               </div>
             </div>
 
             <div class="text-center sm:text-left">
-              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 mb-2">
+              <div id="securityStatus" class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 border border-amber-500/30 text-amber-400 mb-2">
                 <span>🛡️</span>
-                Status Keamanan: SANGAT TERLINDUNGI
+                Status Keamanan: MENUNGGU DATA
               </div>
               <h2 class="text-xl sm:text-2xl font-bold text-white">Personal Scam Shield Aktif</h2>
               <p class="text-sm text-slate-400 max-w-lg mt-1">
@@ -113,7 +114,7 @@
             <span>Total Pemindaian</span>
             <span class="p-2 rounded-lg bg-slate-800 text-cyan-400">🔍</span>
           </div>
-          <div id="statTotal" class="text-2xl font-bold text-white mt-3">24</div>
+          <div id="statTotal" class="text-2xl font-bold text-white mt-3">0</div>
           <div class="text-xs text-slate-400 mt-1">Aktivitas URL, Teks, & Bukti Transfer</div>
         </div>
 
@@ -122,7 +123,7 @@
             <span>Ancaman Kritis Dicegah</span>
             <span class="p-2 rounded-lg bg-rose-950/60 text-rose-400">🚨</span>
           </div>
-          <div id="statHigh" class="text-2xl font-bold text-rose-400 mt-3">3</div>
+          <div id="statHigh" class="text-2xl font-bold text-rose-400 mt-3">0</div>
           <div class="text-xs text-slate-400 mt-1">Skema OTP & deposit lowongan</div>
         </div>
 
@@ -131,7 +132,7 @@
             <span>Peringatan Waspada</span>
             <span class="p-2 rounded-lg bg-amber-950/60 text-amber-400">⚠️</span>
           </div>
-          <div id="statMed" class="text-2xl font-bold text-amber-400 mt-3">5</div>
+          <div id="statMed" class="text-2xl font-bold text-amber-400 mt-3">0</div>
           <div class="text-xs text-slate-400 mt-1">Indikasi rekayasa sosial</div>
         </div>
 
@@ -140,7 +141,7 @@
             <span>Aktivitas Aman</span>
             <span class="p-2 rounded-lg bg-emerald-950/60 text-emerald-400">✅</span>
           </div>
-          <div id="statLow" class="text-2xl font-bold text-emerald-400 mt-3">16</div>
+          <div id="statLow" class="text-2xl font-bold text-emerald-400 mt-3">0</div>
           <div class="text-xs text-slate-400 mt-1">Domain & interaksi terverifikasi</div>
         </div>
       </div>
@@ -154,15 +155,7 @@
           <p class="text-xs text-slate-400 mb-6">Pola ancaman siber yang teridentifikasi</p>
 
           <div id="categoryDistributionContainer" class="space-y-4">
-            <div>
-              <div class="flex items-center justify-between text-xs mb-1">
-                <span class="font-medium text-slate-300">SAFE (Aman)</span>
-                <span class="text-slate-400">0 deteksi (0%)</span>
-              </div>
-              <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                <div class="bg-emerald-500 h-full rounded-full" style="width: 0%"></div>
-              </div>
-            </div>
+            <p class="text-xs text-slate-500 py-6 text-center italic">Memuat analitik...</p>
           </div>
         </div>
 
@@ -201,27 +194,7 @@
             </tr>
           </thead>
           <tbody id="historyTableBody" class="divide-y divide-slate-800/60 text-slate-300">
-            <tr class="hover:bg-slate-800/40">
-              <td class="py-3.5 px-4"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">TEXT</span></td>
-              <td class="py-3.5 px-4 font-mono text-cyan-300">Lowongan kerja like video TikTok komisi 500rb/hari deposit 50rb...</td>
-              <td class="py-3.5 px-4 font-medium">FAKE JOB OFFER</td>
-              <td class="py-3.5 px-4"><span class="px-2.5 py-1 rounded-full font-bold text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/30">HIGH (96)</span></td>
-              <td class="py-3.5 px-4 text-slate-400">Baru Saja</td>
-            </tr>
-            <tr class="hover:bg-slate-800/40">
-              <td class="py-3.5 px-4"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">URL</span></td>
-              <td class="py-3.5 px-4 font-mono text-cyan-300">https://klikbca-verifikasi-hadiah.xyz/login</td>
-              <td class="py-3.5 px-4 font-medium">TYPOSQUATTING</td>
-              <td class="py-3.5 px-4"><span class="px-2.5 py-1 rounded-full font-bold text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/30">HIGH (90)</span></td>
-              <td class="py-3.5 px-4 text-slate-400">10 Menit lalu</td>
-            </tr>
-            <tr class="hover:bg-slate-800/40">
-              <td class="py-3.5 px-4"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">URL</span></td>
-              <td class="py-3.5 px-4 font-mono text-cyan-300">https://www.klikbca.com</td>
-              <td class="py-3.5 px-4 font-medium">SAFE</td>
-              <td class="py-3.5 px-4"><span class="px-2.5 py-1 rounded-full font-bold text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">LOW (0)</span></td>
-              <td class="py-3.5 px-4 text-slate-400">1 Jam lalu</td>
-            </tr>
+            <tr><td colspan="5" class="py-8 text-center text-slate-500">Memuat riwayat pemindaian...</td></tr>
           </tbody>
         </table>
       </div>
@@ -305,6 +278,7 @@
 
   <!-- Script Logic -->
   <script>
+    const API_BASE_URL = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
     let currentMode = 'TEXT';
 
     function switchTab(tab) {
@@ -351,8 +325,9 @@
       resultBox.classList.add('hidden');
 
       try {
-        const res = await fetch('http://localhost:8000/api/v1/detect/analyze', {
+        const res = await fetch(`${API_BASE_URL}/api/v1/detect/analyze`, {
           method: 'POST',
+          credentials: 'include',
           headers: { 
             'Content-Type': 'application/json',
             'X-Trasco-Source': 'Dashboard-Client'
@@ -363,6 +338,7 @@
         if (!res.ok) throw new Error('Backend HTTP error');
         const data = await res.json();
         renderResult(data);
+        await loadAnalyticsData();
 
         // Web Speech Audio
         if ('speechSynthesis' in window && data.avatarGuidance?.speechText) {
@@ -498,13 +474,57 @@
       return element;
     }
 
+    function renderHistory(items) {
+      const historyBody = document.getElementById('historyTableBody');
+      historyBody.replaceChildren();
+
+      if (!items.length) {
+        const emptyRow = document.createElement('tr');
+        const emptyCell = makeTextElement(
+          'td',
+          'py-8 text-center text-slate-500',
+          'Belum ada riwayat pemindaian.'
+        );
+        emptyCell.colSpan = 5;
+        emptyRow.appendChild(emptyCell);
+        historyBody.appendChild(emptyRow);
+        return;
+      }
+
+      items.forEach((item) => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-slate-800/40';
+        const riskClass = item.riskLevel === 'HIGH'
+          ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+          : item.riskLevel === 'MEDIUM' || item.riskLevel === 'UNKNOWN' || item.riskScore === null
+            ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+        const cells = [
+          ['py-3.5 px-4', item.scanType || 'UNKNOWN'],
+          ['py-3.5 px-4 font-mono text-cyan-300 max-w-md truncate', item.sanitizedSnippet || ''],
+          ['py-3.5 px-4 font-medium', String(item.threatCategory || 'PERIKSA MANUAL').replace(/_/g, ' ')],
+          [`py-3.5 px-4 font-bold ${riskClass}`, `${item.riskLevel || 'UNKNOWN'} (${item.riskScore ?? 'Verifikasi Manual'})`],
+          ['py-3.5 px-4 text-slate-400', item.createdAt ? new Date(item.createdAt).toLocaleString('id-ID') : '']
+        ];
+
+        cells.forEach(([className, text]) => {
+          const cell = makeTextElement('td', className, text);
+          row.appendChild(cell);
+        });
+        historyBody.appendChild(row);
+      });
+    }
+
     async function loadAnalyticsData() {
+      const errorBox = document.getElementById('dashboardError');
       try {
-        const res = await fetch('http://localhost:8000/api/v1/analytics/overview', {
+        const res = await fetch(`${API_BASE_URL}/api/v1/analytics/overview`, {
+          credentials: 'include',
           headers: { 'X-Trasco-Source': 'Dashboard-Client' }
         });
-        if (!res.ok) return;
+        if (!res.ok) throw new Error(`Backend analytics HTTP ${res.status}`);
         const data = await res.json();
+        errorBox.classList.add('hidden');
 
         // Update stats
         if (data.riskBreakdown) {
@@ -515,10 +535,24 @@
         }
 
         if (data.securityHygieneScore !== undefined) {
-          document.getElementById('scoreText').textContent = data.securityHygieneScore;
+          const score = data.securityHygieneScore;
+          document.getElementById('scoreText').textContent = score;
           const ring = document.getElementById('scoreRing');
+          const status = document.getElementById('securityStatus');
+          const statusLabel = score >= 80
+            ? 'SANGAT TERLINDUNGI'
+            : score >= 60 ? 'WASPADA' : 'PERLU PERHATIAN';
+          const statusClass = score >= 80
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+            : score >= 60
+              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+              : 'bg-rose-500/10 border-rose-500/30 text-rose-400';
+          status.className = `inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-2 border ${statusClass}`;
+          status.replaceChildren(makeTextElement('span', '', '🛡️'));
+          status.appendChild(document.createTextNode(` Status Keamanan: ${statusLabel}`));
           if (ring) {
-            ring.style.strokeDashoffset = 251.2 - (251.2 * data.securityHygieneScore) / 100;
+            ring.setAttribute('stroke', score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#ef4444');
+            ring.style.strokeDashoffset = 251.2 - (251.2 * score) / 100;
           }
         }
 
@@ -576,12 +610,21 @@
             trendBox.appendChild(column);
           });
         }
+
+        renderHistory(Array.isArray(data.recentHistory) ? data.recentHistory : []);
       } catch (e) {
-        console.warn('Backend unavailable for standalone dashboard live fetch:', e);
+        errorBox.textContent = `Data dashboard belum dapat dimuat dari backend: ${e instanceof Error ? e.message : 'kesalahan tidak diketahui'}.`;
+        errorBox.classList.remove('hidden');
       }
     }
 
-    document.addEventListener('DOMContentLoaded', loadAnalyticsData);
+    document.addEventListener('DOMContentLoaded', () => {
+      void loadAnalyticsData();
+      window.addEventListener('focus', () => void loadAnalyticsData());
+      window.setInterval(() => {
+        if (document.visibilityState === 'visible') void loadAnalyticsData();
+      }, 30000);
+    });
   </script>
 </body>
 </html>

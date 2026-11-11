@@ -6,7 +6,7 @@ from app.models.base import get_db
 from app.models.detection import DetectionLog
 from app.schemas.detection import AnalyzeRequest, AnalyzeImageRequest, AnalyzeResponse
 from app.services.risk_scorer import orchestrate_detection, orchestrate_image_detection
-from app.api.v1.auth import get_optional_current_user
+from app.api.v1.auth import get_browser_visitor_id, get_optional_current_user
 from app.core.scrubber import scrub_pii
 
 router = APIRouter(prefix="/detect", tags=["Threat Detection"])
@@ -16,7 +16,8 @@ router = APIRouter(prefix="/detect", tags=["Threat Detection"])
 def analyze_content(
     request: AnalyzeRequest,
     db: Session = Depends(get_db),
-    current_user = Depends(get_optional_current_user)
+    current_user = Depends(get_optional_current_user),
+    visitor_id: str = Depends(get_browser_visitor_id),
 ):
     # Run orchestrator
     result = orchestrate_detection(request.scanType, request.content, request.metadata)
@@ -30,6 +31,7 @@ def analyze_content(
     log_entry = DetectionLog(
         id=result["scanId"],
         user_id=user_id,
+        visitor_id=None if current_user else visitor_id,
         scan_type=request.scanType,
         target_hash=target_hash,
         sanitized_snippet=snippet,
@@ -50,7 +52,8 @@ def analyze_content(
 def analyze_image_endpoint(
     request: AnalyzeImageRequest,
     db: Session = Depends(get_db),
-    current_user = Depends(get_optional_current_user)
+    current_user = Depends(get_optional_current_user),
+    visitor_id: str = Depends(get_browser_visitor_id),
 ):
     result, status_code = orchestrate_image_detection(request.content, request.mimeType, request.metadata)
 
@@ -59,6 +62,7 @@ def analyze_image_endpoint(
         log_entry = DetectionLog(
             id=result["scanId"],
             user_id=user_id,
+            visitor_id=None if current_user else visitor_id,
             scan_type="IMAGE",
             target_hash=hashlib.sha256(request.content[:200].encode("utf-8")).hexdigest(),
             sanitized_snippet="[Image Scan: Transfer Slip / Visual Content]",

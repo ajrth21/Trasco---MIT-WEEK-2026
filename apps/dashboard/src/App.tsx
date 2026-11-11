@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { Overview } from './pages/Overview';
 import { History } from './pages/History';
@@ -13,26 +13,40 @@ export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
       const overview = await fetchSecurityOverview();
+      const history = await fetchFullHistory();
       setOverviewData(overview);
-      if (overview.recentHistory) {
-        setHistoryItems(overview.recentHistory);
-      }
+      setHistoryItems(history);
     } catch (err: any) {
       console.error('Failed to load dashboard data', err);
       setErrorMsg(err.message || 'Gagal terhubung ke backend engine port 8000.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    void loadData();
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void loadData();
+      }
+    };
+    const refreshInterval = window.setInterval(refreshWhenVisible, 30000);
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(refreshInterval);
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [loadData]);
 
   return (
     <div className="min-h-screen bg-[#0B0F19] flex flex-col text-slate-100">
@@ -64,7 +78,7 @@ export const App: React.FC = () => {
           />
         )}
 
-        {currentTab === 'simulator' && <Simulator />}
+        {currentTab === 'simulator' && <Simulator onScanComplete={loadData} />}
       </main>
 
       <footer className="border-t border-slate-800/80 bg-slate-950/60 py-6 text-center text-xs text-slate-500">
@@ -80,4 +94,3 @@ export const App: React.FC = () => {
     </div>
   );
 };
-

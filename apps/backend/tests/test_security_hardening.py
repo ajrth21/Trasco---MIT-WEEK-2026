@@ -96,21 +96,26 @@ def test_sec01_allow_dashboard_origin():
         data=json.dumps({"scanType": "TEXT", "content": "Halo apa kabar"}),
     )
     assert resp.status_code == 200
+    assert resp.headers["Access-Control-Allow-Origin"] == "http://localhost:5173"
+    assert resp.headers["Access-Control-Allow-Credentials"] == "true"
 
 
 def test_sec01_allow_extension_origin():
     """Chrome extension origin with valid handshake must pass."""
     client = _get_test_client()
+    origin = "chrome-extension://abcdef1234567890"
     resp = client.post(
         "/api/v1/detect/analyze",
         headers={
-            "Origin": "chrome-extension://abcdef1234567890",
+            "Origin": origin,
             "X-Trasco-Source": "Extension-Local",
             "Content-Type": "application/json",
         },
         data=json.dumps({"scanType": "TEXT", "content": "Halo apa kabar"}),
     )
     assert resp.status_code == 200
+    assert resp.headers["Access-Control-Allow-Origin"] == origin
+    assert resp.headers["Access-Control-Allow-Credentials"] == "true"
 
 
 def test_sec01_reject_missing_handshake_header():
@@ -300,4 +305,3 @@ def test_sec03_preserves_existing_scrubbers():
     assert "admin@test.com" not in result
     assert "829103" not in result
     assert "8820129381" not in result
-

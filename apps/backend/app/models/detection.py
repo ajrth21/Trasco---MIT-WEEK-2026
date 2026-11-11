@@ -10,6 +10,7 @@ class DetectionLog(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)
+    visitor_id = Column(String(32), nullable=True, index=True)
     scan_type = Column(String(20), nullable=False)  # URL, TEXT, IMAGE
     target_hash = Column(String(64), index=True, nullable=True)  # SHA256 of content
     sanitized_snippet = Column(String(255), nullable=False)
@@ -32,4 +33,3 @@ class ThreatStatistic(Base):
     category = Column(String(50), nullable=False)
     risk_level = Column(String(20), nullable=False)
     count = Column(Integer, default=1)
-

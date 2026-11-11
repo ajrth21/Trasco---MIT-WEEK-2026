@@ -106,7 +106,7 @@ Trasco---MIT-WEEK-2026/
 ### C. Web Dashboard (`apps/dashboard/`)
 - **Architecture:** Single Page Application (SPA) built with React 18, TypeScript, and Vite.
 - **Styling:** Tailwind CSS loaded via CDN and Plus Jakarta Sans typography.
-- **Zero-Dependency Fallback:** `standalone_dashboard.html` allows complete offline demonstration without requiring `node_modules` or a local development server.
+- **Standalone Preview:** `standalone_dashboard.html` provides a no-build interface preview. Analytics and scan history come from the backend API; it shows an explicit error instead of fabricated metrics when the API is unavailable.
 
 ### D. Shared Contracts (`packages/shared-types/`)
 - Single source of truth for interfaces and types across Dashboard, Extension, and Backend API schemas.
@@ -198,4 +198,3 @@ flowchart TD
 1. **Unidirectional Flow:** Frontend applications (`apps/extension`, `apps/dashboard`) depend on Backend API contracts, never the reverse.
 2. **Contract Centralization:** Types defined in `packages/shared-types` are canonical. Neither extension nor dashboard should define conflicting custom risk models.
 3. **Database Isolation:** Database queries occur strictly inside `apps/backend/app/models/` and route handlers. Neither extension nor frontend has direct database access.
-
