@@ -198,7 +198,7 @@ def test_fastapi_cors_preflight_handled_by_outer_middleware():
     }
     res_options = client.options("/api/v1/analytics/overview", headers=headers)
     assert res_options.status_code == 200
-    assert res_options.headers.get("access-control-allow-origin") == "*"
+    assert res_options.headers.get("access-control-allow-origin") == "http://localhost:5173"
 
 
 @pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI is an optional alternative runner and not installed in local environment")
