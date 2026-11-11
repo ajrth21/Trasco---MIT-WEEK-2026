@@ -270,3 +270,53 @@ def test_multiple_threats_combination():
     assert res["threatCategory"] == "EMERGENCY_IMPERSONATION"
     assert res["heuristicScore"] >= 70
     assert len(res["indicators"]) >= 2
+
+
+def test_reward_signup_url_is_flagged_as_suspicious_promotion():
+    url = "https://bonusbesar.dws88.net/home?register&ref=bckomik"
+    res = analyze_url_heuristics(url)
+    assert res["threatCategory"] == "SUSPICIOUS_PROMOTION"
+    assert res["heuristicScore"] >= 35
+    assert any("bonus" in ind["indicator"].lower() for ind in res["indicators"])
+
+
+def test_redeem_gift_landing_url_is_flagged_as_suspicious_promotion():
+    url = (
+        "https://cdn.novalooe.com/tml/redeemGift.html?"
+        "v=2604171905-3#/?pid=23329&did=619b5a8a-20a9-480c-876d-09fba88fbf0c"
+    )
+    res = analyze_url_heuristics(url)
+    assert res["threatCategory"] == "SUSPICIOUS_PROMOTION"
+    assert res["heuristicScore"] >= 35
+    assert any("hadiah" in ind["indicator"].lower() for ind in res["indicators"])
+
+
+def test_reward_signup_url_stays_flagged_when_ai_returns_safe():
+    from unittest.mock import patch
+
+    url = "https://bonusbesar.dws88.net/home?register&ref=bckomik"
+    safe_ai_result = {"confidenceScore": 0, "threatCategory": "SAFE"}
+    with patch("app.services.risk_scorer.analyze_with_gemini", return_value=safe_ai_result):
+        res = orchestrate_detection("URL", url)
+
+    assert res["riskLevel"] == "MEDIUM"
+    assert res["riskScore"] >= 35
+    assert res["threatCategory"] == "SUSPICIOUS_PROMOTION"
+
+
+def test_reward_signup_url_falls_back_to_heuristics_when_ai_unavailable():
+    from unittest.mock import patch
+
+    url = "https://bonusbesar.dws88.net/home?register&ref=bckomik"
+    with patch("app.services.risk_scorer.analyze_with_gemini", return_value=None):
+        res = orchestrate_detection("URL", url)
+
+    assert res["riskLevel"] == "MEDIUM"
+    assert res["riskScore"] >= 35
+    assert res["threatCategory"] == "SUSPICIOUS_PROMOTION"
+
+
+def test_single_gift_term_in_normal_promo_url_is_not_flagged():
+    res = analyze_url_heuristics("https://example.com/gift-card?campaign=spring")
+    assert res["threatCategory"] == "SAFE"
+    assert res["heuristicScore"] == 0

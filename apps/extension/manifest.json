@@ -9,8 +9,7 @@
     "contextMenus"
   ],
   "host_permissions": [
-    "http://localhost:8000/*",
-    "http://127.0.0.1:8000/*"
+    "https://trasco.oscspace.online/*"
   ],
   "background": {
     "service_worker": "src/background/service-worker.js",
@@ -33,4 +32,3 @@
     "128": "icons/icon128.png"
   }
 }
-

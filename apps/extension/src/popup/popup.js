@@ -22,12 +22,14 @@ document.addEventListener('DOMContentLoaded', () => {
     backendStatusText.textContent = 'Memeriksa Backend Engine...';
 
     try {
-      const cfg = await chrome.storage.local.get(['backendUrl']);
-      const baseUrl = cfg.backendUrl || 'http://localhost:8000';
+      const { backendUrl } = await chrome.storage.local.get(['backendUrl']);
+      const baseUrl = backendUrl && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(backendUrl)
+        ? backendUrl
+        : 'https://trasco.oscspace.online';
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2500);
 
-      const res = await fetch(`${baseUrl}/health`, {
+      const res = await fetch(`${baseUrl}/health/ready`, {
         signal: controller.signal,
         headers: { 'X-Trasco-Source': 'Extension-Local' }
       });
@@ -46,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       backendStatusDot.style.background = '#EF4444';
       backendStatusDot.style.boxShadow = '0 0 8px rgba(239, 68, 68, 0.6)';
-      backendStatusText.textContent = 'Backend Offline (Aktifkan port 8000)';
+      backendStatusText.textContent = 'Backend VPS Offline';
     }
   }
 
@@ -119,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('[TRASCO] Runtime message error:', chrome.runtime.lastError.message);
             scanResult.className = 'result-box HIGH';
             scanResult.style.display = 'block';
-            scanResult.textContent = 'Gagal memindai: Tidak dapat terhubung ke Backend Engine (Port 8000). Pastikan server backend sedang berjalan.';
+            scanResult.textContent = 'Gagal memindai: Tidak dapat terhubung ke TRASCO Backend VPS.';
             return;
           }
 
@@ -308,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('[TRASCO] Runtime message error:', chrome.runtime.lastError.message);
             imageScanResult.className = 'result-box MEDIUM';
             imageScanResult.style.display = 'block';
-            imageScanResult.textContent = 'Gagal memindai: Tidak dapat terhubung ke Backend Engine (Port 8000). Pastikan server backend sedang berjalan.';
+            imageScanResult.textContent = 'Gagal memindai: Tidak dapat terhubung ke TRASCO Backend VPS.';
             return;
           }
 
@@ -360,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Open Web Dashboard
   btnOpenDashboard.addEventListener('click', () => {
-    chrome.tabs.create({ url: 'http://localhost:5173' });
+    chrome.tabs.create({ url: 'https://trasco.oscspace.online' });
   });
 
   // Test Voice Alert

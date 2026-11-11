@@ -1,6 +1,6 @@
 import { SecurityOverviewData, AnalyzeResponse, ScanHistoryItem } from '../types';
 
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:8000' : '');
 
 export async function fetchSecurityOverview(): Promise<SecurityOverviewData> {
   const res = await fetch(`${BASE_URL}/api/v1/analytics/overview`, {
@@ -39,4 +39,3 @@ export async function scanContent(scanType: string, content: string): Promise<An
   }
   return await res.json();
 }
-
